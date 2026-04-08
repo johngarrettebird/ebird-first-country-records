@@ -25,16 +25,17 @@ from datetime import date, datetime
 from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────────────────
-# Set EBIRD_API_KEY in your environment, or paste your key in the fallback below.
-# Get a key at: https://ebird.org/api/keygen
 
-API_KEY = os.environ.get("EBIRD_API_KEY", "YOUR_API_KEY_HERE")
-BASE_URL  = "https://api.ebird.org/v2"
-DELAY     = 0.4   # seconds between API calls — be a good citizen
+HERE        = Path(__file__).parent
+_config     = json.loads((HERE / "config.json").read_text()) if (HERE / "config.json").exists() else {}
+
+API_KEY       = _config.get("ebird_api_key")     or os.environ.get("EBIRD_API_KEY", "YOUR_API_KEY_HERE")
+SLACK_WEBHOOK = _config.get("slack_webhook_url") or os.environ.get("SLACK_WEBHOOK_URL", "")
+BASE_URL      = "https://api.ebird.org/v2"
+DELAY         = 0.4   # seconds between API calls — be a good citizen
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-HERE          = Path(__file__).parent
 SNAPSHOT_PATH = HERE / "species_snapshot.json"
 NEW_FIRSTS    = HERE / "new_firsts.json"
 FIRST_RECORDS = HERE / "first_records.json"
@@ -77,6 +78,23 @@ def fetch_spplist(country_code):
     result = api_get(f"product/spplist/{country_code}")
     time.sleep(DELAY)
     return result if isinstance(result, list) else []
+
+
+# ── Slack ─────────────────────────────────────────────────────────────────────
+
+def post_slack(new_this_run):
+    if not SLACK_WEBHOOK or not new_this_run:
+        return
+    lines = [f"*eBird First Country Records — {len(new_this_run)} new detection{'s' if len(new_this_run) > 1 else ''}*"]
+    for r in new_this_run:
+        lines.append(f"• <{r['ebird_url']}|{r['common_name']}> — {r['country']}")
+    payload = json.dumps({"text": "\n".join(lines)}).encode()
+    req = urllib.request.Request(SLACK_WEBHOOK, data=payload, headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        print("Slack notification sent.")
+    except Exception as e:
+        print(f"Slack notification failed: {e}")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -171,6 +189,8 @@ def run_update():
         json.dumps(firsts_data, ensure_ascii=False),
         encoding="utf-8",
     )
+
+    post_slack(new_this_run)
 
     print(f"\n{'─'*50}")
     print(f"New first country records detected this run: {len(new_this_run)}")
