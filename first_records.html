@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eBird First Country Records</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:   #2d6a2d;
+    --green2:  #3d8b3d;
+    --bg:      #f5f7f5;
+    --card:    #ffffff;
+    --border:  #dde5dd;
+    --text:    #1a2a1a;
+    --muted:   #5a7a5a;
+    --new:     #b85c00;
+    --new-bg:  #fff4ea;
+    --link:    #1a5c9e;
+    --row-alt: #f0f5f0;
+    --shadow:  0 1px 4px rgba(0,0,0,.08);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--green);
+    color: #fff;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  header h1 { font-size: 20px; font-weight: 600; letter-spacing: -.3px; }
+  header .subtitle { font-size: 12px; opacity: .8; margin-top: 1px; }
+  .header-icon { font-size: 28px; }
+  .header-right { margin-left: auto; font-size: 12px; opacity: .75; text-align: right; }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    background: var(--green2);
+    color: #fff;
+    display: flex;
+    gap: 24px;
+    padding: 8px 24px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .stat strong { font-size: 16px; font-weight: 700; display: block; }
+
+  /* ── New firsts banner ── */
+  #new-banner {
+    background: var(--new-bg);
+    border-left: 4px solid var(--new);
+    padding: 12px 24px;
+    display: none;
+  }
+  #new-banner h2 { color: var(--new); font-size: 15px; margin-bottom: 6px; }
+  .new-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .new-tag {
+    background: var(--new);
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 12px;
+    cursor: default;
+  }
+  .new-tag a { color: #fff; text-decoration: underline; }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    position: sticky;
+    top: 58px;
+    z-index: 99;
+    box-shadow: var(--shadow);
+  }
+  .filter-bar label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .filter-group { display: flex; flex-direction: column; gap: 3px; }
+  input[type=text], select, input[type=number] {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    height: 32px;
+  }
+  input[type=text]:focus, select:focus { outline: 2px solid var(--green); }
+  #search { width: 220px; }
+  #country-filter { width: 180px; }
+  #year-from, #year-to { width: 72px; }
+  .quick-filters { display: flex; gap: 6px; align-items: flex-end; }
+  .qbtn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    height: 32px;
+    color: var(--muted);
+  }
+  .qbtn.active, .qbtn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+  .filter-right { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .filter-right input[type=checkbox] { cursor: pointer; }
+  #reset-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    height: 32px;
+  }
+  #reset-btn:hover { background: var(--border); }
+
+  /* ── Main content ── */
+  main { padding: 16px 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  th {
+    background: var(--green);
+    color: #fff;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { background: var(--green2); }
+  th .sort-icon { margin-left: 4px; opacity: .6; }
+  th.active .sort-icon { opacity: 1; }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) { background: var(--row-alt); }
+  tr:hover td { background: #e8f0e8; }
+  .species-name { font-weight: 500; }
+  .sci-name { color: var(--muted); font-style: italic; font-size: 12px; }
+  .date-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cl-link { color: var(--link); font-size: 12px; }
+  .cl-link:hover { text-decoration: underline; }
+  .flag-new { color: var(--new); font-size: 11px; font-weight: 700; margin-left: 4px; }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pagination .info { font-size: 13px; color: var(--muted); }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 36px;
+    text-align: center;
+  }
+  .page-btn:hover { background: var(--border); }
+  .page-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .page-btn:disabled { opacity: .4; cursor: default; }
+
+  /* ── Error / loading ── */
+  .status-msg {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    box-shadow: var(--shadow);
+  }
+  .status-msg code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    color: var(--text);
+  }
+  .error-box {
+    background: #fff3f3;
+    border-left: 4px solid #c0392b;
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .error-box strong { color: #c0392b; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="header-icon">🐦</span>
+  <div>
+    <h1>eBird First Country Records</h1>
+    <div class="subtitle">Data quality tool — first approved species record per country</div>
+  </div>
+  <div class="header-right" id="header-meta"></div>
+</header>
+
+<div class="stats-bar" id="stats-bar">
+  <div class="stat"><strong id="stat-records">—</strong>first records</div>
+  <div class="stat"><strong id="stat-countries">—</strong>countries</div>
+  <div class="stat"><strong id="stat-species">—</strong>species</div>
+  <div class="stat"><strong id="stat-showing">—</strong>showing</div>
+</div>
+
+<div id="new-banner">
+  <h2>⚡ New first country records detected by monitor</h2>
+  <div class="new-list" id="new-list"></div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Search species or country</label>
+    <input type="text" id="search" placeholder="e.g. Winter Wren, Bhutan …">
+  </div>
+  <div class="filter-group">
+    <label>Country</label>
+    <select id="country-filter"><option value="">All countries</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Year range</label>
+    <div style="display:flex;gap:4px;align-items:center">
+      <input type="number" id="year-from" placeholder="from" min="1800" max="2030">
+      <span style="color:var(--muted)">–</span>
+      <input type="number" id="year-to" placeholder="to" min="1800" max="2030">
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Quick filter</label>
+    <div class="quick-filters">
+      <button class="qbtn active" data-years="all">All time</button>
+      <button class="qbtn" data-years="10">Last 10 yr</button>
+      <button class="qbtn" data-years="5">Last 5 yr</button>
+      <button class="qbtn" data-years="1">Last year</button>
+    </div>
+  </div>
+  <div class="filter-right">
+    <label><input type="checkbox" id="show-new-only"> New detections only</label>
+    <button id="reset-btn">Reset filters</button>
+  </div>
+</div>
+
+<main>
+  <div id="content">
+    <div class="status-msg" id="loading-msg">
+      <p>Loading data…</p>
+      <p style="margin-top:8px;font-size:12px">
+        If nothing loads, you may need to serve this via a local server.<br>
+        Run: <code>cd "First Country Records" &amp;&amp; python3 -m http.server 8765</code><br>
+        Then open <code>http://localhost:8765/first_records.html</code>
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let allRecords  = [];   // from first_records.json
+let newRecords  = [];   // from new_firsts.json
+let newCodes    = new Set();  // set of (country_code|species_code) for flagging
+let filtered    = [];
+let page        = 1;
+const PAGE_SIZE = 50;
+
+let sortCol  = "fd";   // field name
+let sortDesc = true;
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+async function init() {
+  let hasEbd = false;
+
+  // Try EBD data first
+  try {
+    const mainResp = await fetch("first_records.json");
+    if (mainResp.ok) {
+      const mainData = await mainResp.json();
+      allRecords = mainData.records || [];
+      hasEbd = true;
+      const meta = document.getElementById("header-meta");
+      meta.innerHTML = `EBD snapshot: ${mainData.generated || "unknown"}<br>Source: ${mainData.source || "—"}`;
+    }
+  } catch (_) { /* will fall back to monitor data */ }
+
+  // Load monitor data (always — needed for NEW badges and banner)
+  let monitorData = null;
+  try {
+    const newResp = await fetch("new_firsts.json");
+    if (newResp.ok) {
+      monitorData = await newResp.json();
+      newRecords = monitorData.detections || [];
+      newCodes = new Set(newRecords.map(r => `${r.country_code}|${r.species_code}`));
+    }
+  } catch (_) { /* no monitor data yet */ }
+
+  // If no EBD, use monitor data as the table source
+  if (!hasEbd) {
+    if (!monitorData || newRecords.length === 0) {
+      document.getElementById("loading-msg").innerHTML = `
+        <div class="error-box">
+          <strong>No data found.</strong><br><br>
+          Run the update monitor to fetch current species lists from the eBird API:<br>
+          <code>python3.9 update_monitor.py</code><br><br>
+          Or run the EBD processor for full historical data:<br>
+          <code>python3.9 process_ebd.py /path/to/ebd.txt</code>
+        </div>`;
+      return;
+    }
+    // Convert monitor records → table format (no dates available)
+    allRecords = newRecords.map(r => ({
+      cc: r.country_code,
+      cn: r.country,
+      sn: r.common_name,
+      sc: r.scientific_name,
+      tc: r.species_code,
+      fd: null,           // date unknown without EBD
+      cl: null,           // no checklist ID from API
+      url: r.ebird_url,   // use species page link instead
+    }));
+    const meta = document.getElementById("header-meta");
+    meta.innerHTML = `API snapshot: ${monitorData.last_updated || "?"}<br>No EBD data — dates unavailable`;
+    // Don't show new banner when all records ARE the monitor data
+    newCodes = new Set();
+    newRecords = [];
+  } else {
+    // EBD loaded — show new banner for monitor detections
+    if (newRecords.length > 0) showNewBanner(monitorData);
+  }
+
+  document.getElementById("stat-records").textContent = allRecords.length.toLocaleString();
+  document.getElementById("stat-countries").textContent =
+    new Set(allRecords.map(r => r.cc)).size.toLocaleString();
+  document.getElementById("stat-species").textContent =
+    new Set(allRecords.map(r => r.tc || r.sn)).size.toLocaleString();
+
+  populateCountryFilter();
+  document.getElementById("loading-msg").style.display = "none";
+  applyFilters();
+}
+
+// ── Country dropdown ──────────────────────────────────────────────────────────
+function populateCountryFilter() {
+  const countries = [...new Set(allRecords.map(r => r.cn))].sort();
+  const sel = document.getElementById("country-filter");
+  countries.forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+// ── New firsts banner ─────────────────────────────────────────────────────────
+function showNewBanner(data) {
+  const banner = document.getElementById("new-banner");
+  banner.style.display = "block";
+  banner.querySelector("h2").textContent =
+    `⚡ ${newRecords.length} new first country record${newRecords.length > 1 ? "s" : ""} detected (last check: ${data.last_updated || "?"})`;
+
+  const list = document.getElementById("new-list");
+  // Show most recent 30
+  newRecords.slice(-30).reverse().forEach(r => {
+    const tag = document.createElement("span");
+    tag.className = "new-tag";
+    tag.innerHTML = `<a href="${r.ebird_url}" target="_blank">${r.country}: ${r.common_name}</a>`;
+    list.appendChild(tag);
+  });
+}
+
+// ── Filtering ─────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const query   = document.getElementById("search").value.toLowerCase().trim();
+  const country = document.getElementById("country-filter").value;
+  const yFrom   = parseInt(document.getElementById("year-from").value) || 0;
+  const yTo     = parseInt(document.getElementById("year-to").value)   || 9999;
+  const newOnly = document.getElementById("show-new-only").checked;
+
+  filtered = allRecords.filter(r => {
+    if (country && r.cn !== country) return false;
+    const year = r.fd ? parseInt(r.fd.substring(0, 4)) : 0;
+    if (year < yFrom || year > yTo) return false;
+    if (newOnly) {
+      const key = `${r.cc}|${r.tc || ""}`;
+      if (!newCodes.has(key)) return false;
+    }
+    if (query) {
+      const hay = `${r.sn} ${r.sc} ${r.cn}`.toLowerCase();
+      if (!hay.includes(query)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    let av = a[sortCol] || "";
+    let bv = b[sortCol] || "";
+    if (sortCol === "fd") {
+      // date strings sort lexicographically = chronologically
+      return sortDesc ? bv.localeCompare(av) : av.localeCompare(bv);
+    }
+    av = av.toLowerCase(); bv = bv.toLowerCase();
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+    return sortDesc ? -cmp : cmp;
+  });
+
+  page = 1;
+  document.getElementById("stat-showing").textContent = filtered.length.toLocaleString();
+  render();
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function render() {
+  const start  = (page - 1) * PAGE_SIZE;
+  const slice  = filtered.slice(start, start + PAGE_SIZE);
+  const total  = filtered.length;
+  const pages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const sortIndicator = (col) => {
+    if (sortCol !== col) return '<span class="sort-icon">⇅</span>';
+    return `<span class="sort-icon">${sortDesc ? "↓" : "↑"}</span>`;
+  };
+
+  const thead = `
+    <thead>
+      <tr>
+        <th onclick="sortBy('cn')" class="${sortCol==='cn'?'active':''}">Country ${sortIndicator('cn')}</th>
+        <th onclick="sortBy('sn')" class="${sortCol==='sn'?'active':''}">Common Name ${sortIndicator('sn')}</th>
+        <th onclick="sortBy('sc')" class="${sortCol==='sc'?'active':''}">Scientific Name ${sortIndicator('sc')}</th>
+        <th onclick="sortBy('fd')" class="${sortCol==='fd'?'active':''}">First Recorded ${sortIndicator('fd')}</th>
+        <th>Checklist</th>
+      </tr>
+    </thead>`;
+
+  const rows = slice.map(r => {
+    const isNew = newCodes.has(`${r.cc}|${r.tc || ""}`) ||
+                  newRecords.some(n => n.country_code === r.cc && n.common_name === r.sn);
+    const newBadge = isNew ? '<span class="flag-new">NEW</span>' : "";
+    const clLink = r.cl
+      ? `<a class="cl-link" href="https://ebird.org/checklist/${r.cl}" target="_blank">${r.cl}</a>`
+      : `<a class="cl-link" href="${r.url || 'https://ebird.org/region/' + r.cc}" target="_blank">View on eBird ↗</a>`;
+    return `
+      <tr>
+        <td>${escHtml(r.cn)}</td>
+        <td><span class="species-name">${escHtml(r.sn)}${newBadge}</span></td>
+        <td><span class="sci-name">${escHtml(r.sc)}</span></td>
+        <td class="date-cell">${r.fd || "—"}</td>
+        <td>${clLink}</td>
+      </tr>`;
+  }).join("");
+
+  // Pagination
+  const pageBtns = buildPageButtons(page, pages);
+
+  const paginationHtml = `
+    <div class="pagination">
+      <div class="info">
+        ${total === 0 ? "No records match" : `${start+1}–${Math.min(start+PAGE_SIZE, total)} of ${total.toLocaleString()}`}
+      </div>
+      <div class="page-btns">${pageBtns}</div>
+    </div>`;
+
+  document.getElementById("content").innerHTML = `
+    ${paginationHtml}
+    <div class="table-wrap">
+      <table>${thead}<tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">No records match the current filters.</td></tr>'}</tbody></table>
+    </div>
+    ${paginationHtml}`;
+}
+
+function buildPageButtons(current, total) {
+  // Show at most 9 page buttons with ellipsis
+  let btns = "";
+  const addBtn = (p, label, active, disabled) => {
+    const cls = `page-btn${active ? " active" : ""}`;
+    if (disabled) {
+      btns += `<button class="${cls}" disabled>${label}</button>`;
+    } else {
+      btns += `<button class="${cls}" onclick="goPage(${p})">${label}</button>`;
+    }
+  };
+
+  addBtn(current - 1, "‹ Prev", false, current === 1);
+
+  if (total <= 9) {
+    for (let i = 1; i <= total; i++) addBtn(i, i, i === current, false);
+  } else {
+    addBtn(1, 1, current === 1, false);
+    if (current > 4) btns += `<span class="page-btn" style="cursor:default">…</span>`;
+    for (let i = Math.max(2, current - 2); i <= Math.min(total - 1, current + 2); i++) {
+      addBtn(i, i, i === current, false);
+    }
+    if (current < total - 3) btns += `<span class="page-btn" style="cursor:default">…</span>`;
+    addBtn(total, total, current === total, false);
+  }
+
+  addBtn(current + 1, "Next ›", false, current === total);
+  return btns;
+}
+
+function goPage(p) {
+  page = p;
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function sortBy(col) {
+  if (sortCol === col) {
+    sortDesc = !sortDesc;
+  } else {
+    sortCol = col;
+    sortDesc = col === "fd";   // dates default to newest-first; text defaults to A-Z
+  }
+  applyFilters();
+}
+
+function escHtml(s) {
+  if (!s) return "";
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+let searchTimer;
+document.getElementById("search").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 220);
+});
+
+["country-filter", "year-from", "year-to", "show-new-only"].forEach(id => {
+  document.getElementById(id).addEventListener("change", applyFilters);
+});
+
+document.querySelectorAll(".qbtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".qbtn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const years = btn.dataset.years;
+    if (years === "all") {
+      document.getElementById("year-from").value = "";
+      document.getElementById("year-to").value   = "";
+    } else {
+      const now = new Date().getFullYear();
+      document.getElementById("year-from").value = now - parseInt(years);
+      document.getElementById("year-to").value   = now;
+    }
+    applyFilters();
+  });
+});
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  document.getElementById("search").value        = "";
+  document.getElementById("country-filter").value = "";
+  document.getElementById("year-from").value      = "";
+  document.getElementById("year-to").value        = "";
+  document.getElementById("show-new-only").checked = false;
+  document.querySelectorAll(".qbtn").forEach(b => b.classList.remove("active"));
+  document.querySelector('.qbtn[data-years="all"]').classList.add("active");
+  applyFilters();
+});
+
+// ── Go ────────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

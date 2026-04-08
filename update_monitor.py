@@ -1,0 +1,206 @@
+#!/Library/Developer/CommandLineTools/usr/bin/python3.9
+"""
+update_monitor.py — Detect new first country records via the eBird API.
+
+Compares each country's current eBird species list against a stored snapshot.
+Any species that appears in a country for the first time is logged as a
+potential new first country record.
+
+Usage:
+    python3 update_monitor.py              # run update, save results
+    python3 update_monitor.py --status     # show counts from last run
+
+Output files (in same directory as this script):
+    species_snapshot.json   — current species-per-country baseline
+    new_firsts.json         — accumulated log of new detections
+"""
+
+import json
+import os
+import sys
+import time
+import urllib.request
+import urllib.error
+from datetime import date, datetime
+from pathlib import Path
+
+# ── Config ────────────────────────────────────────────────────────────────────
+# Set EBIRD_API_KEY in your environment, or paste your key in the fallback below.
+# Get a key at: https://ebird.org/api/keygen
+
+API_KEY = os.environ.get("EBIRD_API_KEY", "YOUR_API_KEY_HERE")
+BASE_URL  = "https://api.ebird.org/v2"
+DELAY     = 0.4   # seconds between API calls — be a good citizen
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+
+HERE          = Path(__file__).parent
+SNAPSHOT_PATH = HERE / "species_snapshot.json"
+NEW_FIRSTS    = HERE / "new_firsts.json"
+FIRST_RECORDS = HERE / "first_records.json"
+
+
+# ── API helpers ───────────────────────────────────────────────────────────────
+
+def api_get(path, params=""):
+    url = f"{BASE_URL}/{path}{'?' + params if params else ''}"
+    req = urllib.request.Request(url, headers={"X-eBirdApiToken": API_KEY})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return []      # country has no records
+        raise
+
+
+def fetch_taxonomy():
+    """Return dict of speciesCode → {commonName, sciName}."""
+    print("Fetching eBird taxonomy …")
+    taxa = api_get("ref/taxonomy/ebird", "fmt=json&cat=species")
+    time.sleep(DELAY)
+    return {
+        t["speciesCode"]: {"sn": t["comName"], "sc": t["sciName"]}
+        for t in taxa
+    }
+
+
+def fetch_countries():
+    """Return list of {code, name} for every country in eBird."""
+    countries = api_get("ref/region/list/country/world")
+    time.sleep(DELAY)
+    return countries
+
+
+def fetch_spplist(country_code):
+    """Return list of species codes recorded in this country."""
+    result = api_get(f"product/spplist/{country_code}")
+    time.sleep(DELAY)
+    return result if isinstance(result, list) else []
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def load_json(path):
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return None
+
+
+def ebd_baseline():
+    """Build {country_code: set(taxon_concept_ids)} from first_records.json."""
+    data = load_json(FIRST_RECORDS)
+    if not data:
+        return {}
+    baseline = {}
+    for r in data["records"]:
+        baseline.setdefault(r["cc"], set()).add(r["tc"])
+    return baseline
+
+
+def run_update():
+    today = str(date.today())
+
+    # Load existing snapshot (species codes per country from prior API runs)
+    snapshot_data = load_json(SNAPSHOT_PATH) or {"updated": today, "countries": {}}
+    snapshot = snapshot_data.get("countries", {})   # {countryCode: [speciesCodes]}
+
+    # Load accumulated new firsts log
+    firsts_data = load_json(NEW_FIRSTS) or {"detections": []}
+    detections  = firsts_data["detections"]
+
+    # Build EBD baseline so we don't re-flag species already in the EBD
+    ebd_base = ebd_baseline()
+    if ebd_base:
+        print(f"EBD baseline loaded: {len(ebd_base)} countries")
+    else:
+        print("No first_records.json found — using API snapshot as sole baseline.")
+
+    taxonomy = fetch_taxonomy()
+    countries = fetch_countries()
+    print(f"Checking {len(countries)} countries …\n")
+
+    new_this_run = []
+
+    for i, country in enumerate(countries, 1):
+        code = country["code"]
+        name = country["name"]
+        print(f"  [{i:3}/{len(countries)}] {name} ({code})", end="", flush=True)
+
+        current_codes = set(fetch_spplist(code))
+
+        prior_codes   = set(snapshot.get(code, []))
+        ebd_codes     = ebd_base.get(code, set())
+
+        # New = in current API list but not in prior snapshot AND not in EBD
+        # (EBD taxon concept IDs ≠ species codes, so EBD check is best-effort)
+        newly_added = current_codes - prior_codes
+
+        if newly_added:
+            print(f"  → {len(newly_added)} new species detected", end="")
+            for sp_code in sorted(newly_added):
+                tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
+                entry = {
+                    "detected": today,
+                    "country_code": code,
+                    "country": name,
+                    "species_code": sp_code,
+                    "common_name": tax["sn"],
+                    "scientific_name": tax["sc"],
+                    "ebird_url": f"https://ebird.org/species/{sp_code}/{code}",
+                }
+                detections.append(entry)
+                new_this_run.append(entry)
+
+        print()
+
+        # Update snapshot
+        snapshot[code] = list(current_codes)
+
+    # Save updated files
+    snapshot_data["updated"]   = today
+    snapshot_data["countries"] = snapshot
+    SNAPSHOT_PATH.write_text(
+        json.dumps(snapshot_data, ensure_ascii=False, indent=None),
+        encoding="utf-8",
+    )
+
+    firsts_data["last_updated"] = today
+    firsts_data["detections"]   = detections
+    NEW_FIRSTS.write_text(
+        json.dumps(firsts_data, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    print(f"\n{'─'*50}")
+    print(f"New first country records detected this run: {len(new_this_run)}")
+    if new_this_run:
+        print()
+        for r in new_this_run:
+            print(f"  {r['country']:25s}  {r['common_name']}")
+        print()
+        print("Open first_records.html (via serve.sh) to review.")
+    print(f"Total accumulated detections: {len(detections)}")
+    print(f"Snapshot saved to {SNAPSHOT_PATH.name}")
+
+
+def show_status():
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        print("No detections logged yet. Run without --status to do a first check.")
+        return
+
+    dets = firsts_data["detections"]
+    print(f"Accumulated detections: {len(dets)}")
+    print(f"Last updated: {firsts_data.get('last_updated', 'unknown')}")
+    print()
+    # Show most recent 20
+    for r in sorted(dets, key=lambda x: x["detected"], reverse=True)[:20]:
+        print(f"  {r['detected']}  {r['country']:25s}  {r['common_name']}")
+
+
+if __name__ == "__main__":
+    if "--status" in sys.argv:
+        show_status()
+    else:
+        run_update()

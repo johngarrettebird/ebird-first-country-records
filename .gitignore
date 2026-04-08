@@ -1,0 +1,10 @@
+# Local monitor state — keep on your machine, don't commit
+species_snapshot.json
+
+# EBD source files if they end up here
+*.txt
+*.gz
+*.zip
+
+# macOS noise
+.DS_Store
