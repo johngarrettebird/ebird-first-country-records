@@ -1,0 +1,33 @@
+name: eBird First Country Records Monitor
+
+on:
+  schedule:
+    - cron: '17 13 * * *'  # 8:17am US Eastern (UTC-5 standard / UTC-4 daylight)
+  workflow_dispatch:         # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # Needed to commit and push JSON files
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run eBird monitor
+        env:
+          EBIRD_API_KEY: ${{ secrets.EBIRD_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python update_monitor.py
+
+      - name: Commit and push updated data files
+        run: |
+          git config user.name "eBird Monitor"
+          git config user.email "monitor@github-actions"
+          git add new_firsts.json species_snapshot.json first_records.json
+          git diff --cached --quiet || git commit -m "Monitor run $(date '+%Y-%m-%d')"
+          git push

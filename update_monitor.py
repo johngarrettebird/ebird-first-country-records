@@ -287,10 +287,37 @@ def bootstrap_first_records():
     print(f"first_records.json written: {len(records):,} records across {len(snapshot)} countries.")
 
 
+def git_push():
+    """Commit and push changed data files to GitHub."""
+    import subprocess
+    files = ["new_firsts.json", "species_snapshot.json", "first_records.json"]
+    result = subprocess.run(
+        ["git", "add"] + files,
+        cwd=HERE, capture_output=True, text=True
+    )
+    # Check if there's anything staged
+    diff = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=HERE
+    )
+    if diff.returncode == 0:
+        print("No changes to push.")
+        return
+    today = str(date.today())
+    subprocess.run(
+        ["git", "commit", "-m", f"Monitor run {today}"],
+        cwd=HERE, check=True
+    )
+    subprocess.run(["git", "push"], cwd=HERE, check=True)
+    print("Pushed to GitHub.")
+
+
 if __name__ == "__main__":
     if "--status" in sys.argv:
         show_status()
     elif "--bootstrap" in sys.argv:
         bootstrap_first_records()
+    elif "--push" in sys.argv:
+        git_push()
     else:
         run_update()
