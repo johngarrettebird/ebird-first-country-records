@@ -10,11 +10,11 @@ echo "=== $(date) ===" >> "$LOG"
 EBIRD_API_KEY=qcgb0td7en2c \
   "$PYTHON" "$DIR/update_monitor.py" >> "$LOG" 2>&1
 
-# Push to GitHub if new_firsts.json changed
+# Push to GitHub if any data files changed
 cd "$DIR"
-if ! git diff --quiet new_firsts.json; then
-    git add new_firsts.json
-    git commit -m "Monitor run $(date '+%Y-%m-%d'): new first country records" >> "$LOG" 2>&1
+git add new_firsts.json species_snapshot.json first_records.json
+if ! git diff --cached --quiet; then
+    git commit -m "Monitor run $(date '+%Y-%m-%d')" >> "$LOG" 2>&1
     git push >> "$LOG" 2>&1
     echo "Pushed to GitHub." >> "$LOG"
 else

@@ -105,15 +105,41 @@ def load_json(path):
     return None
 
 
-def ebd_baseline():
-    """Build {country_code: set(taxon_concept_ids)} from first_records.json."""
-    data = load_json(FIRST_RECORDS)
-    if not data:
-        return {}
-    baseline = {}
-    for r in data["records"]:
-        baseline.setdefault(r["cc"], set()).add(r["tc"])
-    return baseline
+
+def write_first_records(detections, snapshot, today):
+    """Write first_records.json from accumulated monitor detections."""
+    monitoring_since = None
+    firsts_data = load_json(NEW_FIRSTS)
+    if firsts_data:
+        # Infer monitoring_since from oldest detection, or snapshot date
+        dates = [d["detected"] for d in detections if d.get("detected")]
+        monitoring_since = min(dates) if dates else (
+            load_json(SNAPSHOT_PATH) or {}).get("updated", today)
+
+    records = [
+        {
+            "cc":  d["country_code"],
+            "cn":  d["country"],
+            "sn":  d["common_name"],
+            "sc":  d["scientific_name"],
+            "tc":  d["species_code"],
+            "fd":  d["detected"],
+            "cl":  None,
+            "url": d.get("ebird_url"),
+        }
+        for d in detections
+    ]
+
+    output = {
+        "generated":        today,
+        "source":           "eBird API monitor",
+        "monitoring_since": monitoring_since or today,
+        "countries_tracked": len(snapshot),
+        "total":            len(records),
+        "records":          records,
+    }
+    FIRST_RECORDS.write_text(json.dumps(output, ensure_ascii=False), encoding="utf-8")
+    print(f"first_records.json written: {len(records)} detection(s).")
 
 
 def run_update():
@@ -127,14 +153,10 @@ def run_update():
     firsts_data = load_json(NEW_FIRSTS) or {"detections": []}
     detections  = firsts_data["detections"]
 
-    # Build EBD baseline so we don't re-flag species already in the EBD
-    ebd_base = ebd_baseline()
-    if ebd_base:
-        print(f"EBD baseline loaded: {len(ebd_base)} countries")
-    else:
-        print("No first_records.json found — using API snapshot as sole baseline.")
+    # No EBD needed — snapshot is the sole baseline
+    print("Using API snapshot as baseline.")
 
-    taxonomy = fetch_taxonomy()
+    taxonomy  = fetch_taxonomy()
     countries = fetch_countries()
     print(f"Checking {len(countries)} countries …\n")
 
@@ -147,11 +169,7 @@ def run_update():
 
         current_codes = set(fetch_spplist(code))
 
-        prior_codes   = set(snapshot.get(code, []))
-        ebd_codes     = ebd_base.get(code, set())
-
-        # New = in current API list but not in prior snapshot AND not in EBD
-        # (EBD taxon concept IDs ≠ species codes, so EBD check is best-effort)
+        prior_codes = set(snapshot.get(code, []))
         newly_added = current_codes - prior_codes
 
         if newly_added:
@@ -199,7 +217,7 @@ def run_update():
         for r in new_this_run:
             print(f"  {r['country']:25s}  {r['common_name']}")
         print()
-        print("Open first_records.html (via serve.sh) to review.")
+        print("Open first_records.html to review.")
     print(f"Total accumulated detections: {len(detections)}")
     print(f"Snapshot saved to {SNAPSHOT_PATH.name}")
 
@@ -219,8 +237,60 @@ def show_status():
         print(f"  {r['detected']}  {r['country']:25s}  {r['common_name']}")
 
 
+def bootstrap_first_records():
+    """Build first_records.json from existing snapshot + taxonomy (no country API calls)."""
+    snapshot_data = load_json(SNAPSHOT_PATH)
+    if not snapshot_data:
+        sys.exit("No species_snapshot.json found. Run without flags first to build a snapshot.")
+    snapshot   = snapshot_data.get("countries", {})
+    since      = snapshot_data.get("updated", str(date.today()))
+    taxonomy   = fetch_taxonomy()
+
+    # Fetch country names once
+    print("Fetching country names …")
+    countries  = fetch_countries()
+    name_map   = {c["code"]: c["name"] for c in countries}
+
+    firsts_data = load_json(NEW_FIRSTS) or {"detections": []}
+    detections  = firsts_data.get("detections", [])
+
+    # Build one record per (country, species) pair already in the snapshot
+    records = []
+    for cc, sp_codes in snapshot.items():
+        cn = name_map.get(cc, cc)
+        for sp_code in sp_codes:
+            tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
+            records.append({
+                "cc":  cc,
+                "cn":  cn,
+                "sn":  tax["sn"],
+                "sc":  tax["sc"],
+                "tc":  sp_code,
+                "fd":  None,
+                "cl":  None,
+            })
+
+    # Overlay dates for anything already flagged as a new detection
+    detected_lookup = {(d["country_code"], d["species_code"]): d["detected"] for d in detections}
+    for r in records:
+        r["fd"] = detected_lookup.get((r["cc"], r["tc"]))
+
+    output = {
+        "generated":         str(date.today()),
+        "source":            "eBird API snapshot",
+        "monitoring_since":  since,
+        "countries_tracked": len(snapshot),
+        "total":             len(records),
+        "records":           records,
+    }
+    FIRST_RECORDS.write_text(json.dumps(output, ensure_ascii=False), encoding="utf-8")
+    print(f"first_records.json written: {len(records):,} records across {len(snapshot)} countries.")
+
+
 if __name__ == "__main__":
     if "--status" in sys.argv:
         show_status()
+    elif "--bootstrap" in sys.argv:
+        bootstrap_first_records()
     else:
         run_update()

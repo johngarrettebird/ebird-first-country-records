@@ -312,16 +312,18 @@ let sortDesc = true;
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function init() {
   let hasEbd = false;
+  let mainData = null;
 
-  // Try EBD data first
+  // Try first_records.json (either EBD-generated or monitor-generated)
   try {
     const mainResp = await fetch("first_records.json");
     if (mainResp.ok) {
-      const mainData = await mainResp.json();
+      mainData = await mainResp.json();
       allRecords = mainData.records || [];
-      hasEbd = true;
-      const meta = document.getElementById("header-meta");
-      meta.innerHTML = `EBD snapshot: ${mainData.generated || "unknown"}<br>Source: ${mainData.source || "—"}`;
+      const isMonitorSource = (mainData.source || "").includes("monitor");
+      if (!isMonitorSource && allRecords.length > 0) {
+        hasEbd = true;
+      }
     }
   } catch (_) { /* will fall back to monitor data */ }
 
@@ -338,35 +340,47 @@ async function init() {
 
   // If no EBD, use monitor data as the table source
   if (!hasEbd) {
+    const monitoringSince = mainData && mainData.monitoring_since ? mainData.monitoring_since : "?";
+    const countriesTracked = mainData && mainData.countries_tracked ? mainData.countries_tracked : "?";
+    const lastRun = mainData && mainData.generated ? mainData.generated : (monitorData && monitorData.last_updated ? monitorData.last_updated : "?");
+
+    const meta = document.getElementById("header-meta");
+    meta.innerHTML = `Monitoring since: ${monitoringSince}<br>${countriesTracked} countries tracked · Last run: ${lastRun}`;
+
     if (!monitorData || newRecords.length === 0) {
+      // Monitoring is active but no new records yet — show friendly status
       document.getElementById("loading-msg").innerHTML = `
-        <div class="error-box">
-          <strong>No data found.</strong><br><br>
-          Run the update monitor to fetch current species lists from the eBird API:<br>
-          <code>python3.9 update_monitor.py</code><br><br>
-          Or run the EBD processor for full historical data:<br>
-          <code>python3.9 process_ebd.py /path/to/ebd.txt</code>
+        <div style="padding:32px 0">
+          <div style="font-size:40px;margin-bottom:12px">🔍</div>
+          <strong style="font-size:16px">Monitor is active — no new first country records detected yet</strong>
+          <p style="margin-top:10px;color:var(--muted)">
+            Watching <strong>${countriesTracked}</strong> countries since <strong>${monitoringSince}</strong>.<br>
+            This page will update automatically when a new first country record is detected.
+          </p>
         </div>`;
       return;
     }
-    // Convert monitor records → table format (no dates available)
+    // Convert monitor records → table format
     allRecords = newRecords.map(r => ({
       cc: r.country_code,
       cn: r.country,
       sn: r.common_name,
       sc: r.scientific_name,
       tc: r.species_code,
-      fd: null,           // date unknown without EBD
-      cl: null,           // no checklist ID from API
-      url: r.ebird_url,   // use species page link instead
+      fd: r.fd || r.detected || null,
+      cl: null,
+      url: r.ebird_url || r.url,
     }));
-    const meta = document.getElementById("header-meta");
-    meta.innerHTML = `API snapshot: ${monitorData.last_updated || "?"}<br>No EBD data — dates unavailable`;
     // Don't show new banner when all records ARE the monitor data
     newCodes = new Set();
     newRecords = [];
   } else {
-    // EBD loaded — show new banner for monitor detections
+    // Snapshot loaded — set header, show new banner for monitor detections
+    const lastRun = monitorData && monitorData.last_updated ? monitorData.last_updated : "?";
+    const since   = mainData && mainData.monitoring_since   ? mainData.monitoring_since   : mainData && mainData.generated ? mainData.generated : "?";
+    const tracked = mainData && mainData.countries_tracked  ? mainData.countries_tracked  : "?";
+    document.getElementById("header-meta").innerHTML =
+      `Monitoring ${tracked} countries since ${since}<br>Last monitor run: ${lastRun}`;
     if (newRecords.length > 0) showNewBanner(monitorData);
   }
 
