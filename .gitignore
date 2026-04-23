@@ -1,5 +1,4 @@
-# Local monitor state and credentials — keep on your machine, don't commit
-species_snapshot.json
+# Local credentials — keep on your machine, don't commit
 config.json
 
 # EBD source files if they end up here
