@@ -177,6 +177,15 @@
   .cl-link:hover { text-decoration: underline; }
   .flag-new { color: var(--new); font-size: 11px; font-weight: 700; margin-left: 4px; }
 
+  /* ── Notes ── */
+  tr.resolved td { background: #f4f4f4 !important; color: #999; }
+  tr.resolved .species-name { text-decoration: line-through; color: #999; }
+  tr.resolved .sci-name { color: #bbb; }
+  tr.resolved .flag-new { opacity: .4; }
+  .resolved-badge { display: inline-block; background: #2d6a2d; color: #fff; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-weight: 600; margin-bottom: 3px; }
+  .note-text { font-size: 12px; color: #666; margin-bottom: 3px; font-style: italic; }
+  .rec-key { font-family: monospace; font-size: 10px; color: #bbb; display: block; }
+
   /* ── Pagination ── */
   .pagination {
     display: flex;
@@ -280,7 +289,9 @@
   </div>
   <div class="filter-right">
     <label><input type="checkbox" id="show-new-only"> New detections only</label>
+    <label><input type="checkbox" id="show-unresolved-only"> Hide resolved</label>
     <button id="reset-btn">Reset filters</button>
+    <a id="edit-notes-btn" href="https://github.com/johngarrettebird/ebird-first-country-records/edit/main/notes.json" target="_blank" style="background:var(--green);color:#fff;border-radius:5px;padding:5px 10px;font-size:12px;text-decoration:none;height:32px;display:inline-flex;align-items:center;gap:4px;">✏️ Edit Notes</a>
   </div>
 </div>
 
@@ -302,6 +313,7 @@
 let allRecords  = [];   // from first_records.json
 let newRecords  = [];   // from new_firsts.json
 let newCodes    = new Set();  // set of (country_code|species_code) for flagging
+let notesMap    = {};   // from notes.json, keyed by "cc|tc"
 let filtered    = [];
 let page        = 1;
 const PAGE_SIZE = 50;
@@ -326,6 +338,18 @@ async function init() {
       }
     }
   } catch (_) { /* will fall back to monitor data */ }
+
+  // Load notes
+  try {
+    const notesResp = await fetch("notes.json");
+    if (notesResp.ok) {
+      const raw = await notesResp.json();
+      // Strip meta keys starting with _
+      Object.entries(raw).forEach(([k, v]) => {
+        if (!k.startsWith("_")) notesMap[k] = v;
+      });
+    }
+  } catch (_) { /* no notes yet */ }
 
   // Load monitor data (always — needed for NEW badges and banner)
   let monitorData = null;
@@ -430,7 +454,8 @@ function applyFilters() {
   const country = document.getElementById("country-filter").value;
   const yFrom   = parseInt(document.getElementById("year-from").value) || 0;
   const yTo     = parseInt(document.getElementById("year-to").value)   || 9999;
-  const newOnly = document.getElementById("show-new-only").checked;
+  const newOnly        = document.getElementById("show-new-only").checked;
+  const hideResolved   = document.getElementById("show-unresolved-only").checked;
 
   filtered = allRecords.filter(r => {
     if (country && r.cn !== country) return false;
@@ -439,6 +464,10 @@ function applyFilters() {
     if (newOnly) {
       const key = `${r.cc}|${r.tc || ""}`;
       if (!newCodes.has(key)) return false;
+    }
+    if (hideResolved) {
+      const note = notesMap[`${r.cc}|${r.tc || ""}`];
+      if (note && note.resolved) return false;
     }
     if (query) {
       const hay = `${r.sn} ${r.sc} ${r.cn}`.toLowerCase();
@@ -485,6 +514,7 @@ function render() {
         <th onclick="sortBy('sc')" class="${sortCol==='sc'?'active':''}">Scientific Name ${sortIndicator('sc')}</th>
         <th onclick="sortBy('fd')" class="${sortCol==='fd'?'active':''}">First Recorded ${sortIndicator('fd')}</th>
         <th>Checklist</th>
+        <th>Notes</th>
       </tr>
     </thead>`;
 
@@ -495,13 +525,22 @@ function render() {
     const clLink = r.cl
       ? `<a class="cl-link" href="https://ebird.org/checklist/${r.cl}" target="_blank">${r.cl}</a>`
       : `<a class="cl-link" href="${r.url || 'https://ebird.org/region/' + r.cc}" target="_blank">View on eBird ↗</a>`;
+
+    const noteKey  = `${r.cc}|${r.tc || ""}`;
+    const note     = notesMap[noteKey];
+    const resolved = note && note.resolved;
+    const noteHtml = note
+      ? `${resolved ? '<span class="resolved-badge">✓ Resolved</span><br>' : ""}${note.notes ? `<span class="note-text">${escHtml(note.notes)}</span><br>` : ""}<span class="rec-key">${noteKey}</span>`
+      : `<span class="rec-key">${noteKey}</span>`;
+
     return `
-      <tr>
+      <tr class="${resolved ? 'resolved' : ''}">
         <td>${escHtml(r.cn)}</td>
         <td><span class="species-name">${escHtml(r.sn)}${newBadge}</span></td>
         <td><span class="sci-name">${escHtml(r.sc)}</span></td>
         <td class="date-cell">${r.fd || "—"}</td>
         <td>${clLink}</td>
+        <td>${noteHtml}</td>
       </tr>`;
   }).join("");
 
@@ -582,7 +621,7 @@ document.getElementById("search").addEventListener("input", () => {
   searchTimer = setTimeout(applyFilters, 220);
 });
 
-["country-filter", "year-from", "year-to", "show-new-only"].forEach(id => {
+["country-filter", "year-from", "year-to", "show-new-only", "show-unresolved-only"].forEach(id => {
   document.getElementById(id).addEventListener("change", applyFilters);
 });
 
@@ -609,6 +648,7 @@ document.getElementById("reset-btn").addEventListener("click", () => {
   document.getElementById("year-from").value      = "";
   document.getElementById("year-to").value        = "";
   document.getElementById("show-new-only").checked = false;
+  document.getElementById("show-unresolved-only").checked = false;
   document.querySelectorAll(".qbtn").forEach(b => b.classList.remove("active"));
   document.querySelector('.qbtn[data-years="all"]').classList.add("active");
   applyFilters();
