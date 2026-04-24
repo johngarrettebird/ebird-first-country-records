@@ -159,5 +159,9 @@
   "KG|grebus1": {
     "resolved": true,
     "notes": "AGREE -- good description, slight extension from current records"
+  },
+  "KZ|blkswa": {
+    "resolved": true,
+    "notes": "AGREE -- Escapee correctly tagged with X; presumed correct"
   }
 }
