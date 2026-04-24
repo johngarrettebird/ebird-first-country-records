@@ -507,8 +507,25 @@ async function init() {
     }
   } catch (_) { /* no monitor data yet */ }
 
-  // Merge new detections into allRecords (add any not already present in snapshot)
+  // Merge new detections into allRecords
   if (newRecords.length > 0) {
+    // Build lookup of detection data by key
+    const detMap = {};
+    newRecords.forEach(r => { detMap[`${r.country_code}|${r.species_code}`] = r; });
+
+    // Overlay cl/fd onto existing snapshot records that match a detection
+    allRecords = allRecords.map(r => {
+      const det = detMap[`${r.cc}|${r.tc}`];
+      if (!det) return r;
+      return {
+        ...r,
+        cl:  r.cl  || det.cl     || null,
+        fd:  r.fd  || det.detected || null,
+        url: r.url || det.ebird_url || null,
+      };
+    });
+
+    // Add any detections not present in the snapshot at all
     const existingKeys = new Set(allRecords.map(r => `${r.cc}|${r.tc}`));
     const toAdd = newRecords
       .filter(r => !existingKeys.has(`${r.country_code}|${r.species_code}`))
