@@ -3,31 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>eBird First Country Records</title>
+<title>eBird First Country Records — Cornell Lab of Ornithology</title>
+<!-- Cornell Lab brand fonts: add Adobe Fonts kit @import here when available -->
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --green:   #2d6a2d;
-    --green2:  #3d8b3d;
-    --bg:      #f5f7f5;
+    --green:   #296239;  /* Forest Green */
+    --green2:  #284530;  /* Forest Green Shade */
+    --bg:      #F5F3E9;  /* Sand */
     --card:    #ffffff;
-    --border:  #dde5dd;
-    --text:    #1a2a1a;
-    --muted:   #5a7a5a;
-    --new:     #b85c00;
-    --new-bg:  #fff4ea;
-    --link:    #1a5c9e;
-    --row-alt: #f0f5f0;
+    --border:  #DEE7E6;  /* Sky Blue Tint 1 */
+    --text:    #2E261F;  /* Warm Black */
+    --muted:   #6D6762;  /* Black Tint 1 */
+    --new:     #FFBC10;  /* Gold */
+    --new-bg:  #FFF3A5;  /* Gold Tint 2 */
+    --link:    #385B75;  /* Ocean Blue Shade */
+    --row-alt: #F1F5F4;  /* Sky Blue Tint 2 */
     --shadow:  0 1px 4px rgba(0,0,0,.08);
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: 'Suisse Works', Georgia, 'Times New Roman', serif;
     background: var(--bg);
     color: var(--text);
     font-size: 14px;
     line-height: 1.5;
+  }
+
+  h1, h2, h3, h4, th, .filter-bar label, .stat, button, select,
+  input, .pagination .info, .qbtn, #reset-btn, .token-btn, .edit-btn,
+  .resolved-badge, .flag-new, .rec-key, .saving-spinner, .header-right {
+    font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif;
   }
 
   /* ── Header ── */
@@ -43,22 +50,23 @@
     z-index: 100;
     box-shadow: 0 2px 8px rgba(0,0,0,.2);
   }
-  header h1 { font-size: 20px; font-weight: 600; letter-spacing: -.3px; }
-  header .subtitle { font-size: 12px; opacity: .8; margin-top: 1px; }
+  header h1 { font-size: 20px; font-weight: 300; letter-spacing: -.2px; } /* Gibson Light */
+  header .subtitle { font-size: 12px; opacity: .8; margin-top: 1px; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
   .header-icon { font-size: 28px; }
   .header-right { margin-left: auto; font-size: 12px; opacity: .75; text-align: right; }
 
   /* ── Stats bar ── */
   .stats-bar {
-    background: var(--green2);
+    background: var(--text);  /* Warm Black — clean contrast after Forest Green header */
     color: #fff;
     display: flex;
     gap: 24px;
     padding: 8px 24px;
     font-size: 13px;
     flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,.15);  /* The Line — white on dark */
   }
-  .stat strong { font-size: 16px; font-weight: 700; display: block; }
+  .stat strong { font-size: 16px; font-weight: 600; display: block; }
 
   /* ── New firsts banner ── */
   #new-banner {
@@ -67,17 +75,17 @@
     padding: 12px 24px;
     display: none;
   }
-  #new-banner h2 { color: var(--new); font-size: 15px; margin-bottom: 6px; }
+  #new-banner h2 { color: var(--text); font-size: 15px; font-weight: 400; margin-bottom: 6px; }
   .new-list { display: flex; flex-wrap: wrap; gap: 8px; }
   .new-tag {
     background: var(--new);
-    color: #fff;
+    color: var(--text);  /* Warm Black on Gold — 10:1 contrast, WCAG AAA */
     border-radius: 4px;
     padding: 3px 8px;
     font-size: 12px;
     cursor: default;
   }
-  .new-tag a { color: #fff; text-decoration: underline; }
+  .new-tag a { color: var(--text); text-decoration: underline; }
 
   /* ── Filter bar ── */
   .filter-bar {
@@ -169,21 +177,21 @@
   }
   tr:last-child td { border-bottom: none; }
   tr:nth-child(even) { background: var(--row-alt); }
-  tr:hover td { background: #e8f0e8; }
-  .species-name { font-weight: 500; }
-  .sci-name { color: var(--muted); font-style: italic; font-size: 12px; }
-  .date-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .cl-link { color: var(--link); font-size: 12px; }
+  tr:hover td { background: #DEE7E6; }  /* Sky Blue Tint 1 */
+  .species-name { font-weight: 500; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
+  .sci-name { color: var(--muted); font-style: italic; font-size: 12px; font-family: 'Suisse Works', Georgia, serif; }
+  .date-cell { white-space: nowrap; font-variant-numeric: tabular-nums; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
+  .cl-link { color: var(--link); font-size: 12px; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
   .cl-link:hover { text-decoration: underline; }
-  .flag-new { color: var(--new); font-size: 11px; font-weight: 700; margin-left: 4px; }
+  .flag-new { color: var(--green2); font-size: 11px; font-weight: 700; margin-left: 4px; }  /* Forest Green Shade */
 
   /* ── Notes ── */
-  tr.resolved td { background: #f4f4f4 !important; color: #999; }
-  tr.resolved .species-name { text-decoration: line-through; color: #999; }
-  tr.resolved .sci-name { color: #bbb; }
+  tr.resolved td { background: #F5F3E9 !important; color: var(--muted); }  /* Sand — softer than grey */
+  tr.resolved .species-name { text-decoration: line-through; color: var(--muted); }
+  tr.resolved .sci-name { color: #AAC4C4; }  /* Sky Blue Shade */
   tr.resolved .flag-new { opacity: .4; }
-  .resolved-badge { display: inline-block; background: #2d6a2d; color: #fff; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-weight: 600; margin-bottom: 3px; }
-  .note-text { font-size: 12px; color: #555; margin-bottom: 3px; font-style: italic; }
+  .resolved-badge { display: inline-block; background: var(--green); color: #fff; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-weight: 600; margin-bottom: 3px; }
+  .note-text { font-size: 12px; color: var(--muted); margin-bottom: 3px; font-style: italic; font-family: 'Suisse Works', Georgia, serif; }
   .rec-key { font-family: monospace; font-size: 10px; color: #bbb; display: block; margin-top: 2px; }
   .edit-btn { background: none; border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; font-size: 11px; cursor: pointer; color: var(--muted); margin-top: 4px; display: inline-block; }
   .edit-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
@@ -194,7 +202,7 @@
   .note-editor-btns .save-btn { background: var(--green); color: #fff; border-color: var(--green); }
   .note-editor-btns .save-btn:hover { background: var(--green2); }
   .token-btn { border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; height: 32px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); }
-  .token-btn.set { background: #e8f5e8; border-color: var(--green); color: var(--green); }
+  .token-btn.set { background: #CFEBBF; border-color: var(--green); color: var(--green2); }  /* Forest Green Tint 2 */
   .saving-spinner { color: var(--muted); font-size: 12px; font-style: italic; }
 
   /* ── Pagination ── */
@@ -239,14 +247,14 @@
     color: var(--text);
   }
   .error-box {
-    background: #fff3f3;
-    border-left: 4px solid #c0392b;
+    background: #FFF8F7;  /* Red scale step 2 */
+    border-left: 4px solid #DF1E12;  /* Red */
     padding: 16px 20px;
     border-radius: 4px;
     margin: 16px 0;
     font-size: 13px;
   }
-  .error-box strong { color: #c0392b; }
+  .error-box strong { color: #B31B1B; }  /* Red Shade */
 </style>
 </head>
 <body>
@@ -255,7 +263,7 @@
   <span class="header-icon">🐦</span>
   <div>
     <h1>eBird First Country Records</h1>
-    <div class="subtitle">Data quality tool — first approved species record per country</div>
+    <div class="subtitle">A Cornell Lab of Ornithology data quality tool · first approved species record per country</div>
   </div>
   <div class="header-right" id="header-meta"></div>
 </header>
