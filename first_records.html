@@ -307,7 +307,7 @@
     </div>
   </div>
   <div class="filter-right">
-    <label><input type="checkbox" id="show-new-only"> New detections only</label>
+    <label><input type="checkbox" id="show-new-only" checked> New detections only</label>
     <label><input type="checkbox" id="show-unresolved-only"> Hide resolved</label>
     <button id="reset-btn">Reset filters</button>
     <button id="token-btn" class="token-btn" onclick="manageToken()">🔑 Set GitHub Token</button>
@@ -812,7 +812,7 @@ document.getElementById("reset-btn").addEventListener("click", () => {
   document.getElementById("country-filter").value = "";
   document.getElementById("year-from").value      = "";
   document.getElementById("year-to").value        = "";
-  document.getElementById("show-new-only").checked = false;
+  document.getElementById("show-new-only").checked = true;
   document.getElementById("show-unresolved-only").checked = false;
   document.querySelectorAll(".qbtn").forEach(b => b.classList.remove("active"));
   document.querySelector('.qbtn[data-years="all"]').classList.add("active");
