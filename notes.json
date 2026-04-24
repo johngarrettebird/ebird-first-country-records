@@ -209,5 +209,9 @@
   "SR|pebcuc1": {
     "resolved": true,
     "notes": "AGREE -- from area where species is probably expected and within/close to mapped range; no documentation"
+  },
+  "LI|gargan": {
+    "resolved": true,
+    "notes": "AGREE -- record not exceptional (but still a country first!)"
   }
 }
