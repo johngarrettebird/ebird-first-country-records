@@ -107,5 +107,9 @@
   "SM|eurcoo": {
     "resolved": true,
     "notes": "AGREE - expected country first from small region"
+  },
+  "SM|comkin1": {
+    "resolved": true,
+    "notes": "AGREE - expected country first form small region"
   }
 }
