@@ -1,7 +1,7 @@
 {
-  "_readme": "Keys are 'country_code|species_code' — both shown in the Notes column on the site. Each entry can have 'resolved' (true/false) and/or 'notes' (text).",
-  "_example": {
+  "_readme": "Keys are 'country_code|species_code' (shown in the Notes column). Each entry can have 'resolved' (true/false) and/or 'notes' (text).",
+  "CP|brnboo": {
     "resolved": true,
-    "notes": "Wrong species entered, corrected by Marshall 2026-04-23"
+    "notes": "Test checklist by MJI, now deleted"
   }
 }
