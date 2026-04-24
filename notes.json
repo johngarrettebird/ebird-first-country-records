@@ -197,5 +197,9 @@
   "TT|batpig1": {
     "resolved": true,
     "notes": "AGREE -- from known area (mapped for island) but no prior acceptable reports in eBird; must be quite rare."
+  },
+  "SS|borcis1": {
+    "resolved": true,
+    "notes": "AGREE -- from area where species is probably expected and within/close to mapped range; no documentation"
   }
 }
