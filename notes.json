@@ -254,5 +254,8 @@
   "CA|x00879": {
     "resolved": true,
     "notes": "DISAGREE -- description not adequate for record of this magnitude; sent to re-review"
+  },
+  "CV|x00782": {
+    "notes": "PENDING -- need to checkin with CV reviewer on this"
   }
 }
