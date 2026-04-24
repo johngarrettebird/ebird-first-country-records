@@ -103,5 +103,9 @@
   "RU|whwsco2": {
     "resolved": true,
     "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted"
+  },
+  "SM|eurcoo": {
+    "resolved": true,
+    "notes": "AGREE - expected country first from small region"
   }
 }
