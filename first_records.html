@@ -183,8 +183,19 @@
   tr.resolved .sci-name { color: #bbb; }
   tr.resolved .flag-new { opacity: .4; }
   .resolved-badge { display: inline-block; background: #2d6a2d; color: #fff; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-weight: 600; margin-bottom: 3px; }
-  .note-text { font-size: 12px; color: #666; margin-bottom: 3px; font-style: italic; }
-  .rec-key { font-family: monospace; font-size: 10px; color: #bbb; display: block; }
+  .note-text { font-size: 12px; color: #555; margin-bottom: 3px; font-style: italic; }
+  .rec-key { font-family: monospace; font-size: 10px; color: #bbb; display: block; margin-top: 2px; }
+  .edit-btn { background: none; border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; font-size: 11px; cursor: pointer; color: var(--muted); margin-top: 4px; display: inline-block; }
+  .edit-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+  .note-editor textarea { width: 100%; font-size: 12px; border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; resize: vertical; font-family: inherit; margin: 4px 0; }
+  .note-editor textarea:focus { outline: 2px solid var(--green); }
+  .note-editor-btns { display: flex; gap: 6px; margin-top: 4px; }
+  .note-editor-btns button { padding: 3px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); }
+  .note-editor-btns .save-btn { background: var(--green); color: #fff; border-color: var(--green); }
+  .note-editor-btns .save-btn:hover { background: var(--green2); }
+  .token-btn { border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; height: 32px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); }
+  .token-btn.set { background: #e8f5e8; border-color: var(--green); color: var(--green); }
+  .saving-spinner { color: var(--muted); font-size: 12px; font-style: italic; }
 
   /* ── Pagination ── */
   .pagination {
@@ -291,7 +302,7 @@
     <label><input type="checkbox" id="show-new-only"> New detections only</label>
     <label><input type="checkbox" id="show-unresolved-only"> Hide resolved</label>
     <button id="reset-btn">Reset filters</button>
-    <a id="edit-notes-btn" href="https://github.com/johngarrettebird/ebird-first-country-records/edit/main/notes.json" target="_blank" style="background:var(--green);color:#fff;border-radius:5px;padding:5px 10px;font-size:12px;text-decoration:none;height:32px;display:inline-flex;align-items:center;gap:4px;">✏️ Edit Notes</a>
+    <button id="token-btn" class="token-btn" onclick="manageToken()">🔑 Set GitHub Token</button>
   </div>
 </div>
 
@@ -309,6 +320,144 @@
 </main>
 
 <script>
+// ── GitHub API ───────────────────────────────────────────────────────────────
+const REPO       = "johngarrettebird/ebird-first-country-records";
+const NOTES_FILE = "notes.json";
+
+function getToken() { return localStorage.getItem("gh_pat") || ""; }
+
+function updateTokenBtn() {
+  const btn = document.getElementById("token-btn");
+  if (!btn) return;
+  if (getToken()) {
+    btn.textContent = "🔑 Token set";
+    btn.classList.add("set");
+  } else {
+    btn.textContent = "🔑 Set GitHub Token";
+    btn.classList.remove("set");
+  }
+}
+
+function manageToken() {
+  if (getToken()) {
+    if (confirm("GitHub token is set. Clear it?")) {
+      localStorage.removeItem("gh_pat");
+      updateTokenBtn();
+    }
+  } else {
+    const t = prompt(
+      "Paste your GitHub Personal Access Token.\n\n" +
+      "Need one? Go to: github.com/settings/tokens/new\n" +
+      "Select 'Fine-grained token', choose this repo,\n" +
+      "and grant Contents: Read and Write.\n\n" +
+      "The token is stored only in this browser."
+    );
+    if (t && t.trim()) {
+      localStorage.setItem("gh_pat", t.trim());
+      updateTokenBtn();
+    }
+  }
+}
+
+function renderNoteCell(key, note) {
+  const resolved = note && note.resolved;
+  const parts = [];
+  if (resolved) parts.push('<span class="resolved-badge">✓ Resolved</span><br>');
+  if (note && note.notes) parts.push(`<span class="note-text">${escHtml(note.notes)}</span><br>`);
+  parts.push(`<span class="rec-key">${key}</span>`);
+  parts.push(` <button class="edit-btn" onclick="startEdit('${key}')">Edit</button>`);
+  return parts.join("");
+}
+
+function startEdit(key) {
+  const cell = document.getElementById("note-cell-" + key.replace("|", "__"));
+  if (!cell) return;
+  const note = notesMap[key] || {};
+  cell.innerHTML = `
+    <div class="note-editor">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <input type="checkbox" id="re-${key.replace("|","__")}" ${note.resolved ? "checked" : ""}> Resolved
+      </label>
+      <textarea id="nt-${key.replace("|","__")}" rows="3" placeholder="Add notes…">${note.notes ? note.notes.replace(/</g,"&lt;") : ""}</textarea>
+      <div class="note-editor-btns">
+        <button class="save-btn" onclick="saveNote('${key}')">Save</button>
+        <button onclick="document.getElementById('note-cell-${key.replace('|','__')}').innerHTML=renderNoteCell('${key}',notesMap['${key}']||null)">Cancel</button>
+      </div>
+    </div>`;
+}
+
+async function saveNote(key) {
+  const safeKey = key.replace("|", "__");
+  const resolved = document.getElementById("re-" + safeKey).checked;
+  const text     = document.getElementById("nt-" + safeKey).value.trim();
+  const cell     = document.getElementById("note-cell-" + safeKey);
+
+  let token = getToken();
+  if (!token) {
+    manageToken();
+    token = getToken();
+    if (!token) return;
+  }
+
+  cell.innerHTML = `<span class="saving-spinner">Saving…</span>`;
+
+  try {
+    // Get current SHA
+    const metaResp = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${NOTES_FILE}`,
+      { headers: { Authorization: `token ${token}` } }
+    );
+    if (metaResp.status === 401) {
+      localStorage.removeItem("gh_pat"); updateTokenBtn();
+      alert("Token rejected. Please set your GitHub token again.");
+      applyFilters(); return;
+    }
+    if (!metaResp.ok) throw new Error(`GitHub API error ${metaResp.status}`);
+    const meta = await metaResp.json();
+
+    // Build updated notes object
+    const updated = { ...notesMap };
+    if (resolved || text) {
+      updated[key] = {};
+      if (resolved) updated[key].resolved = true;
+      if (text)     updated[key].notes    = text;
+    } else {
+      delete updated[key];
+    }
+
+    const fileContent = {
+      "_readme": "Keys are 'country_code|species_code' (shown in the Notes column). Each entry can have 'resolved' (true/false) and/or 'notes' (text).",
+      ...updated
+    };
+
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(fileContent, null, 2) + "\n")));
+
+    const saveResp = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${NOTES_FILE}`,
+      {
+        method: "PUT",
+        headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Update notes: ${key}`, content: encoded, sha: meta.sha })
+      }
+    );
+    if (!saveResp.ok) throw new Error(`Save failed: ${saveResp.status}`);
+
+    notesMap = updated;
+    updateTokenBtn();
+    // Update just this cell + resolved row styling without full re-render
+    const newNote = updated[key];
+    cell.innerHTML = renderNoteCell(key, newNote || null);
+    const row = cell.closest("tr");
+    if (row) {
+      row.className = newNote && newNote.resolved ? "resolved" : "";
+    }
+
+  } catch (err) {
+    alert("Error saving: " + err.message);
+    cell.innerHTML = renderNoteCell(key, notesMap[key] || null);
+  }
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 let allRecords  = [];   // from first_records.json
 let newRecords  = [];   // from new_firsts.json
@@ -323,35 +472,31 @@ let sortDesc = true;
 
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function init() {
-  let hasEbd = false;
+  updateTokenBtn();
+
   let mainData = null;
 
-  // Try first_records.json (either EBD-generated or monitor-generated)
+  // Load first_records.json (full snapshot baseline)
   try {
     const mainResp = await fetch("first_records.json");
     if (mainResp.ok) {
       mainData = await mainResp.json();
       allRecords = mainData.records || [];
-      const isMonitorSource = (mainData.source || "").includes("monitor");
-      if (!isMonitorSource && allRecords.length > 0) {
-        hasEbd = true;
-      }
     }
-  } catch (_) { /* will fall back to monitor data */ }
+  } catch (_) { /* no snapshot yet */ }
 
   // Load notes
   try {
     const notesResp = await fetch("notes.json");
     if (notesResp.ok) {
       const raw = await notesResp.json();
-      // Strip meta keys starting with _
       Object.entries(raw).forEach(([k, v]) => {
         if (!k.startsWith("_")) notesMap[k] = v;
       });
     }
   } catch (_) { /* no notes yet */ }
 
-  // Load monitor data (always — needed for NEW badges and banner)
+  // Load monitor data — always needed for NEW badges, banner, and merging new detections
   let monitorData = null;
   try {
     const newResp = await fetch("new_firsts.json");
@@ -362,51 +507,46 @@ async function init() {
     }
   } catch (_) { /* no monitor data yet */ }
 
-  // If no EBD, use monitor data as the table source
-  if (!hasEbd) {
-    const monitoringSince = mainData && mainData.monitoring_since ? mainData.monitoring_since : "?";
-    const countriesTracked = mainData && mainData.countries_tracked ? mainData.countries_tracked : "?";
-    const lastRun = mainData && mainData.generated ? mainData.generated : (monitorData && monitorData.last_updated ? monitorData.last_updated : "?");
-
-    const meta = document.getElementById("header-meta");
-    meta.innerHTML = `Monitoring since: ${monitoringSince}<br>${countriesTracked} countries tracked · Last run: ${lastRun}`;
-
-    if (!monitorData || newRecords.length === 0) {
-      // Monitoring is active but no new records yet — show friendly status
-      document.getElementById("loading-msg").innerHTML = `
-        <div style="padding:32px 0">
-          <div style="font-size:40px;margin-bottom:12px">🔍</div>
-          <strong style="font-size:16px">Monitor is active — no new first country records detected yet</strong>
-          <p style="margin-top:10px;color:var(--muted)">
-            Watching <strong>${countriesTracked}</strong> countries since <strong>${monitoringSince}</strong>.<br>
-            This page will update automatically when a new first country record is detected.
-          </p>
-        </div>`;
-      return;
-    }
-    // Convert monitor records → table format
-    allRecords = newRecords.map(r => ({
-      cc: r.country_code,
-      cn: r.country,
-      sn: r.common_name,
-      sc: r.scientific_name,
-      tc: r.species_code,
-      fd: r.fd || r.detected || null,
-      cl: null,
-      url: r.ebird_url || r.url,
-    }));
-    // Don't show new banner when all records ARE the monitor data
-    newCodes = new Set();
-    newRecords = [];
-  } else {
-    // Snapshot loaded — set header, show new banner for monitor detections
-    const lastRun = monitorData && monitorData.last_updated ? monitorData.last_updated : "?";
-    const since   = mainData && mainData.monitoring_since   ? mainData.monitoring_since   : mainData && mainData.generated ? mainData.generated : "?";
-    const tracked = mainData && mainData.countries_tracked  ? mainData.countries_tracked  : "?";
-    document.getElementById("header-meta").innerHTML =
-      `Monitoring ${tracked} countries since ${since}<br>Last monitor run: ${lastRun}`;
-    if (newRecords.length > 0) showNewBanner(monitorData);
+  // Merge new detections into allRecords (add any not already present in snapshot)
+  if (newRecords.length > 0) {
+    const existingKeys = new Set(allRecords.map(r => `${r.cc}|${r.tc}`));
+    const toAdd = newRecords
+      .filter(r => !existingKeys.has(`${r.country_code}|${r.species_code}`))
+      .map(r => ({
+        cc: r.country_code,
+        cn: r.country,
+        sn: r.common_name,
+        sc: r.scientific_name,
+        tc: r.species_code,
+        fd: r.detected || null,
+        cl: null,
+        url: r.ebird_url || null,
+      }));
+    allRecords = allRecords.concat(toAdd);
   }
+
+  // Header metadata
+  const since   = mainData && mainData.monitoring_since  ? mainData.monitoring_since  : "?";
+  const tracked = mainData && mainData.countries_tracked ? mainData.countries_tracked : "?";
+  const lastRun = monitorData && monitorData.last_updated ? monitorData.last_updated
+                : mainData   && mainData.generated        ? mainData.generated : "?";
+  document.getElementById("header-meta").innerHTML =
+    `Monitoring ${tracked} countries since ${since}<br>Last monitor run: ${lastRun}`;
+
+  if (allRecords.length === 0) {
+    document.getElementById("loading-msg").innerHTML = `
+      <div style="padding:32px 0">
+        <div style="font-size:40px;margin-bottom:12px">🔍</div>
+        <strong style="font-size:16px">Monitor is active — no first country records loaded yet</strong>
+        <p style="margin-top:10px;color:var(--muted)">
+          Watching <strong>${tracked}</strong> countries since <strong>${since}</strong>.<br>
+          This page will update automatically when a new first country record is detected.
+        </p>
+      </div>`;
+    return;
+  }
+
+  if (newRecords.length > 0 && monitorData) showNewBanner(monitorData);
 
   document.getElementById("stat-records").textContent = allRecords.length.toLocaleString();
   document.getElementById("stat-countries").textContent =
@@ -527,11 +667,10 @@ function render() {
       : `<a class="cl-link" href="${r.url || 'https://ebird.org/region/' + r.cc}" target="_blank">View on eBird ↗</a>`;
 
     const noteKey  = `${r.cc}|${r.tc || ""}`;
+    const safeKey  = noteKey.replace("|", "__");
     const note     = notesMap[noteKey];
     const resolved = note && note.resolved;
-    const noteHtml = note
-      ? `${resolved ? '<span class="resolved-badge">✓ Resolved</span><br>' : ""}${note.notes ? `<span class="note-text">${escHtml(note.notes)}</span><br>` : ""}<span class="rec-key">${noteKey}</span>`
-      : `<span class="rec-key">${noteKey}</span>`;
+    const noteHtml = `<div id="note-cell-${safeKey}">${renderNoteCell(noteKey, note)}</div>`;
 
     return `
       <tr class="${resolved ? 'resolved' : ''}">
