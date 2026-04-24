@@ -234,5 +234,9 @@
   "TD|beawoo1": {
     "resolved": true,
     "notes": "AGREE -- record not exceptional (but still a country first!)"
+  },
+  "CG|whtfra2": {
+    "resolved": true,
+    "notes": "DISAGREE -- no indication the species occurs; filter error; likely a typo?"
   }
 }
