@@ -91,5 +91,9 @@
   "NP|norwhe": {
     "resolved": true,
     "notes": "AGREE -- eBird country first; photos (status?)"
+  },
+  "PA|yemfly1": {
+    "resolved": true,
+    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted"
   }
 }
