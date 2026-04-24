@@ -167,5 +167,8 @@
   "IE|yebtea1": {
     "resolved": true,
     "notes": "AGREE -- Escapee correctly tagged with X; presumed correct"
+  },
+  "XX|bnhgul1": {
+    "notes": "DISAGREE -- taxonomy error and filter error; reviewed and filter fixed"
   }
 }
