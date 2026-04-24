@@ -80,6 +80,15 @@ def fetch_spplist(country_code):
     return result if isinstance(result, list) else []
 
 
+def fetch_checklist_id(country_code, species_code):
+    """Return the most recent checklist subId for this species in this country, or None."""
+    result = api_get(f"data/obs/{country_code}/recent/{species_code}", "back=30")
+    time.sleep(DELAY)
+    if result and isinstance(result, list):
+        return result[0].get("subId")
+    return None
+
+
 # ── Slack ─────────────────────────────────────────────────────────────────────
 
 def post_slack(new_this_run):
@@ -87,7 +96,8 @@ def post_slack(new_this_run):
         return
     lines = [f"*eBird First Country Records — {len(new_this_run)} new detection{'s' if len(new_this_run) > 1 else ''}*"]
     for r in new_this_run:
-        lines.append(f"• <{r['ebird_url']}|{r['common_name']}> — {r['country']}")
+        cl_part = f"  <{r['cl_url']}|checklist>" if r.get("cl_url") else ""
+        lines.append(f"• <{r['ebird_url']}|{r['common_name']}> — {r['country']}{cl_part}")
     payload = json.dumps({"text": "\n".join(lines)}).encode()
     req = urllib.request.Request(SLACK_WEBHOOK, data=payload, headers={"Content-Type": "application/json"})
     try:
@@ -176,6 +186,7 @@ def run_update():
             print(f"  → {len(newly_added)} new species detected", end="")
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
+                cl_id = fetch_checklist_id(code, sp_code)
                 entry = {
                     "detected": today,
                     "country_code": code,
@@ -184,6 +195,8 @@ def run_update():
                     "common_name": tax["sn"],
                     "scientific_name": tax["sc"],
                     "ebird_url": f"https://ebird.org/species/{sp_code}/{code}",
+                    "cl": cl_id,
+                    "cl_url": f"https://ebird.org/checklist/{cl_id}" if cl_id else None,
                 }
                 detections.append(entry)
                 new_this_run.append(entry)
@@ -312,11 +325,36 @@ def git_push():
     print("Pushed to GitHub.")
 
 
+def backfill_checklists():
+    """Fetch checklist IDs for existing detections that are missing them (within 30-day window)."""
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to backfill.")
+    detections = firsts_data["detections"]
+    missing = [d for d in detections if not d.get("cl")]
+    print(f"Backfilling checklist IDs for {len(missing)} detection(s) …")
+    updated = 0
+    for d in missing:
+        cl_id = fetch_checklist_id(d["country_code"], d["species_code"])
+        if cl_id:
+            d["cl"]     = cl_id
+            d["cl_url"] = f"https://ebird.org/checklist/{cl_id}"
+            print(f"  ✓  {d['country']:25s}  {d['common_name']}  → {cl_id}")
+            updated += 1
+        else:
+            print(f"  –  {d['country']:25s}  {d['common_name']}  (not found)")
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nDone. {updated}/{len(missing)} checklist IDs filled in.")
+
+
 if __name__ == "__main__":
     if "--status" in sys.argv:
         show_status()
     elif "--bootstrap" in sys.argv:
         bootstrap_first_records()
+    elif "--backfill-checklists" in sys.argv:
+        backfill_checklists()
     elif "--push" in sys.argv:
         git_push()
     else:

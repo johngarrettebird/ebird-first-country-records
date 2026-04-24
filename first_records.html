@@ -519,7 +519,7 @@ async function init() {
         sc: r.scientific_name,
         tc: r.species_code,
         fd: r.detected || null,
-        cl: null,
+        cl: r.cl || null,
         url: r.ebird_url || null,
       }));
     allRecords = allRecords.concat(toAdd);
