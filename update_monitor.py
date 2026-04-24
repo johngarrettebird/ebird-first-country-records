@@ -96,8 +96,8 @@ def post_slack(new_this_run):
         return
     lines = [f"*eBird First Country Records — {len(new_this_run)} new detection{'s' if len(new_this_run) > 1 else ''}*"]
     for r in new_this_run:
-        cl_part = f"  <{r['cl_url']}|checklist>" if r.get("cl_url") else ""
-        lines.append(f"• <{r['ebird_url']}|{r['common_name']}> — {r['country']}{cl_part}")
+        cl_part = f"  <{r['cl_url']}|checklist> · " if r.get("cl_url") else "  "
+        lines.append(f"• {r['common_name']} — {r['country']}  {cl_part}<{r['ebird_url']}|species page>")
     payload = json.dumps({"text": "\n".join(lines)}).encode()
     req = urllib.request.Request(SLACK_WEBHOOK, data=payload, headers={"Content-Type": "application/json"})
     try:
