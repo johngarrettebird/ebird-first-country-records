@@ -679,9 +679,10 @@ function render() {
     const isNew = newCodes.has(`${r.cc}|${r.tc || ""}`) ||
                   newRecords.some(n => n.country_code === r.cc && n.common_name === r.sn);
     const newBadge = isNew ? '<span class="flag-new">NEW</span>' : "";
+    const speciesLink = `<a class="cl-link" href="${r.url || 'https://ebird.org/species/' + r.tc + '/' + r.cc}" target="_blank">Species page ↗</a>`;
     const clLink = r.cl
-      ? `<a class="cl-link" href="https://ebird.org/checklist/${r.cl}" target="_blank">${r.cl}</a>`
-      : `<a class="cl-link" href="${r.url || 'https://ebird.org/region/' + r.cc}" target="_blank">View on eBird ↗</a>`;
+      ? `<a class="cl-link" href="https://ebird.org/checklist/${r.cl}" target="_blank">Checklist ↗</a> · ${speciesLink}`
+      : speciesLink;
 
     const noteKey  = `${r.cc}|${r.tc || ""}`;
     const safeKey  = noteKey.replace("|", "__");
