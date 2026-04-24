@@ -56,9 +56,9 @@ def api_get(path, params=""):
 
 
 def fetch_taxonomy():
-    """Return dict of speciesCode → {commonName, sciName}."""
+    """Return dict of speciesCode → {sn, sc} for all eBird categories."""
     print("Fetching eBird taxonomy …")
-    taxa = api_get("ref/taxonomy/ebird", "fmt=json&cat=species")
+    taxa = api_get("ref/taxonomy/ebird", "fmt=json")
     time.sleep(DELAY)
     return {
         t["speciesCode"]: {"sn": t["comName"], "sc": t["sciName"]}
@@ -325,6 +325,40 @@ def git_push():
     print("Pushed to GitHub.")
 
 
+def fix_names():
+    """Patch common/scientific names in new_firsts.json using local taxonomy CSV."""
+    import csv
+    csv_candidates = sorted(HERE.glob("eBird_taxonomy_*.csv"))
+    if not csv_candidates:
+        sys.exit("No eBird_taxonomy_*.csv found in this directory.")
+    csv_path = csv_candidates[-1]  # most recent version
+    print(f"Loading taxonomy from {csv_path.name} …")
+    lookup = {}
+    with open(csv_path, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            lookup[row["SPECIES_CODE"]] = {
+                "sn": row["PRIMARY_COM_NAME"],
+                "sc": row["SCI_NAME"],
+            }
+
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to fix.")
+    detections = firsts_data["detections"]
+    fixed = 0
+    for d in detections:
+        sp = d.get("species_code", "")
+        tax = lookup.get(sp)
+        if tax and (d.get("common_name") == sp or d.get("scientific_name") in ("unknown", "", None)):
+            d["common_name"]    = tax["sn"]
+            d["scientific_name"] = tax["sc"]
+            print(f"  {sp:10s} → {tax['sn']}")
+            fixed += 1
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nFixed {fixed} name(s) in new_firsts.json.")
+
+
 def backfill_checklists():
     """Fetch checklist IDs for existing detections that are missing them (within 30-day window)."""
     firsts_data = load_json(NEW_FIRSTS)
@@ -355,6 +389,8 @@ if __name__ == "__main__":
         bootstrap_first_records()
     elif "--backfill-checklists" in sys.argv:
         backfill_checklists()
+    elif "--fix-names" in sys.argv:
+        fix_names()
     elif "--push" in sys.argv:
         git_push()
     else:
