@@ -170,5 +170,9 @@
   },
   "XX|bnhgul1": {
     "notes": "DISAGREE -- taxonomy error and filter error; reviewed and filter fixed"
+  },
+  "DE|spwgoo1": {
+    "resolved": true,
+    "notes": "AGREE -- Escapee correctly tagged with X; photos; will update matrix"
   }
 }
