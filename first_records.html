@@ -259,6 +259,19 @@
   /* ── Mobile ── */
   .sci-inline { display: none; }  /* shown only on mobile, below species name */
 
+  /* ── Photo thumbnail ── */
+  .species-cell { display: flex; align-items: flex-start; gap: 10px; }
+  .photo-thumb {
+    width: 80px; height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: block;
+    transition: opacity .15s;
+  }
+  .photo-thumb:hover { opacity: .85; }
+
   @media (max-width: 640px) {
     /* Header — compact, hide monitoring meta */
     header { padding: 10px 16px; gap: 8px; }
@@ -603,9 +616,10 @@ async function init() {
       if (!det) return r;
       return {
         ...r,
-        cl:  r.cl  || det.cl     || null,
-        fd:  r.fd  || det.detected || null,
-        url: r.url || det.ebird_url || null,
+        cl:       r.cl       || det.cl        || null,
+        fd:       r.fd       || det.detected  || null,
+        url:      r.url      || det.ebird_url || null,
+        photo_url: r.photo_url || det.photo_url || null,
       };
     });
 
@@ -619,9 +633,10 @@ async function init() {
         sn: r.common_name,
         sc: r.scientific_name,
         tc: r.species_code,
-        fd: r.detected || null,
-        cl: r.cl || null,
-        url: r.ebird_url || null,
+        fd:        r.detected   || null,
+        cl:        r.cl         || null,
+        url:       r.ebird_url  || null,
+        photo_url: r.photo_url  || null,
       }));
     allRecords = allRecords.concat(toAdd);
   }
@@ -778,8 +793,13 @@ function render() {
       <tr class="${resolved ? 'resolved' : ''}">
         <td data-label="Country">${escHtml(r.cn)}</td>
         <td data-label="Species">
-          <span class="species-name">${escHtml(r.sn)}${newBadge}</span>
-          <span class="sci-name sci-inline">${escHtml(r.sc)}</span>
+          <div class="species-cell">
+            ${r.photo_url ? `<a href="${r.photo_url.replace('/320','1800')}" target="_blank"><img class="photo-thumb" src="${r.photo_url}" alt="${escHtml(r.sn)}" loading="lazy"></a>` : ''}
+            <div>
+              <span class="species-name">${escHtml(r.sn)}${newBadge}</span>
+              <span class="sci-name sci-inline">${escHtml(r.sc)}</span>
+            </div>
+          </div>
         </td>
         <td data-label="Scientific Name" class="td-sci"><span class="sci-name">${escHtml(r.sc)}</span></td>
         <td data-label="First Detected" class="date-cell">${r.fd || "—"}</td>

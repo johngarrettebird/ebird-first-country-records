@@ -89,6 +89,31 @@ def fetch_checklist_id(country_code, species_code):
     return None
 
 
+def fetch_photo_url(species_code, country_code):
+    """Return a Macaulay Library photo thumbnail URL for this species in this country, or None."""
+    url = (
+        f"https://search.macaulaylibrary.org/api/v1/search"
+        f"?taxonCode={species_code}&regionCode={country_code}"
+        f"&count=1&sort=rating_rank_desc&mediaType=photo"
+    )
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "eBird-Monitor/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        content = data.get("results", {}).get("content", [])
+        if not content:
+            return None
+        item = content[0]
+        if item.get("previewUrl"):
+            return item["previewUrl"]
+        asset_id = item.get("assetId")
+        if asset_id:
+            return f"https://cdn.download.ams.birds.cornell.edu/api/v1/asset/{asset_id}/320"
+    except Exception:
+        pass
+    return None
+
+
 # ── Slack ─────────────────────────────────────────────────────────────────────
 
 def post_slack(new_this_run):
@@ -187,6 +212,7 @@ def run_update():
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
                 cl_id = fetch_checklist_id(code, sp_code)
+                photo_url = fetch_photo_url(sp_code, code)
                 entry = {
                     "detected": today,
                     "country_code": code,
@@ -197,6 +223,7 @@ def run_update():
                     "ebird_url": f"https://ebird.org/species/{sp_code}/{code}",
                     "cl": cl_id,
                     "cl_url": f"https://ebird.org/checklist/{cl_id}" if cl_id else None,
+                    "photo_url": photo_url,
                 }
                 detections.append(entry)
                 new_this_run.append(entry)
@@ -359,6 +386,28 @@ def fix_names():
     print(f"\nFixed {fixed} name(s) in new_firsts.json.")
 
 
+def backfill_photos():
+    """Fetch Macaulay Library photo URLs for existing detections that are missing them."""
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to backfill.")
+    detections = firsts_data["detections"]
+    missing = [d for d in detections if not d.get("photo_url")]
+    print(f"Backfilling photos for {len(missing)} detection(s) …")
+    updated = 0
+    for d in missing:
+        photo_url = fetch_photo_url(d["species_code"], d["country_code"])
+        if photo_url:
+            d["photo_url"] = photo_url
+            print(f"  ✓  {d['country']:25s}  {d['common_name']}")
+            updated += 1
+        else:
+            print(f"  –  {d['country']:25s}  {d['common_name']}  (no photo)")
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nDone. {updated}/{len(missing)} photos found.")
+
+
 def backfill_checklists():
     """Fetch checklist IDs for existing detections that are missing them (within 30-day window)."""
     firsts_data = load_json(NEW_FIRSTS)
@@ -389,6 +438,8 @@ if __name__ == "__main__":
         bootstrap_first_records()
     elif "--backfill-checklists" in sys.argv:
         backfill_checklists()
+    elif "--backfill-photos" in sys.argv:
+        backfill_photos()
     elif "--fix-names" in sys.argv:
         fix_names()
     elif "--push" in sys.argv:
