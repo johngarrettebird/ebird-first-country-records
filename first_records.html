@@ -255,6 +255,82 @@
     font-size: 13px;
   }
   .error-box strong { color: #B31B1B; }  /* Red Shade */
+
+  /* ── Mobile ── */
+  .sci-inline { display: none; }  /* shown only on mobile, below species name */
+
+  @media (max-width: 640px) {
+    /* Header — compact, hide monitoring meta */
+    header { padding: 10px 16px; gap: 8px; }
+    header h1 { font-size: 16px; }
+    header .subtitle { display: none; }
+    .header-right { display: none; }
+    .header-icon { font-size: 22px; }
+
+    /* Stats bar — tighter */
+    .stats-bar { gap: 16px; padding: 8px 16px; }
+    .stat strong { font-size: 14px; }
+
+    /* New banner */
+    #new-banner { padding: 10px 16px; }
+    .new-list { gap: 6px; }
+
+    /* Filter bar — not sticky (too tall), stacked */
+    .filter-bar {
+      position: static;
+      padding: 10px 16px;
+      gap: 8px;
+    }
+    .filter-group { width: 100%; }
+    #search, #country-filter { width: 100%; }
+    .quick-filters { flex-wrap: wrap; }
+    .filter-right { margin-left: 0; width: 100%; flex-wrap: wrap; gap: 10px; }
+    .token-btn { display: none; }  /* editing on mobile not practical */
+
+    /* Main content */
+    main { padding: 10px 12px; }
+
+    /* Table → card layout */
+    .table-wrap { overflow-x: visible; }
+    table, tbody { display: block; }
+    thead { display: none; }
+    tr {
+      display: block;
+      background: var(--card);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+    }
+    tr:nth-child(even) { background: var(--card); }
+    tr:hover td { background: transparent; }
+    td {
+      display: block;
+      padding: 3px 0;
+      border: none;
+      font-size: 13px;
+    }
+    td::before {
+      content: attr(data-label);
+      font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      display: block;
+      margin-top: 6px;
+    }
+    td:first-child::before { margin-top: 0; }
+    .td-sci { display: none; }  /* sci name shown inline under species instead */
+    .sci-inline { display: block; margin-top: 1px; }
+    td[data-label="Notes"] .rec-key { display: none; }  /* hide key on mobile */
+
+    /* Pagination — just Prev/Next on mobile */
+    .page-btn:not(.prev-btn):not(.next-btn):not(.active) { display: none; }
+    .pagination { justify-content: center; gap: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -700,12 +776,15 @@ function render() {
 
     return `
       <tr class="${resolved ? 'resolved' : ''}">
-        <td>${escHtml(r.cn)}</td>
-        <td><span class="species-name">${escHtml(r.sn)}${newBadge}</span></td>
-        <td><span class="sci-name">${escHtml(r.sc)}</span></td>
-        <td class="date-cell">${r.fd || "—"}</td>
-        <td>${clLink}</td>
-        <td>${noteHtml}</td>
+        <td data-label="Country">${escHtml(r.cn)}</td>
+        <td data-label="Species">
+          <span class="species-name">${escHtml(r.sn)}${newBadge}</span>
+          <span class="sci-name sci-inline">${escHtml(r.sc)}</span>
+        </td>
+        <td data-label="Scientific Name" class="td-sci"><span class="sci-name">${escHtml(r.sc)}</span></td>
+        <td data-label="First Detected" class="date-cell">${r.fd || "—"}</td>
+        <td data-label="Links">${clLink}</td>
+        <td data-label="Notes">${noteHtml}</td>
       </tr>`;
   }).join("");
 
@@ -731,8 +810,8 @@ function render() {
 function buildPageButtons(current, total) {
   // Show at most 9 page buttons with ellipsis
   let btns = "";
-  const addBtn = (p, label, active, disabled) => {
-    const cls = `page-btn${active ? " active" : ""}`;
+  const addBtn = (p, label, active, disabled, extra = "") => {
+    const cls = `page-btn${active ? " active" : ""}${extra ? " " + extra : ""}`;
     if (disabled) {
       btns += `<button class="${cls}" disabled>${label}</button>`;
     } else {
@@ -740,7 +819,7 @@ function buildPageButtons(current, total) {
     }
   };
 
-  addBtn(current - 1, "‹ Prev", false, current === 1);
+  addBtn(current - 1, "‹ Prev", false, current === 1, "prev-btn");
 
   if (total <= 9) {
     for (let i = 1; i <= total; i++) addBtn(i, i, i === current, false);
@@ -754,7 +833,7 @@ function buildPageButtons(current, total) {
     addBtn(total, total, current === total, false);
   }
 
-  addBtn(current + 1, "Next ›", false, current === total);
+  addBtn(current + 1, "Next ›", false, current === total, "next-btn");
   return btns;
 }
 
