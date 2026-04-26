@@ -326,5 +326,9 @@
   "BR|scfpar2": {
     "resolved": true,
     "notes": "DISAGREE -- I asked for re-review; no indication of how it was identified to this species"
+  },
+  "EC|bkhant7": {
+    "resolved": true,
+    "notes": "DISAGREE -- far out of range and presumably intended to be Black-hooded Antthrush or something else; set to Rereview"
   }
 }
