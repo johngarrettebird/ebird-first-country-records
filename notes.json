@@ -427,5 +427,9 @@
   "SS|planig1": {
     "resolved": true,
     "notes": "AGREE - record not exceptional? allowed on filter and within range (undercovered region!)"
+  },
+  "ZW|stgsta1": {
+    "resolved": true,
+    "notes": "AGREE - brief but good description and right within expected area"
   }
 }
