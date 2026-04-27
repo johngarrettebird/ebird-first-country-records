@@ -330,5 +330,9 @@
   "EC|bkhant7": {
     "resolved": true,
     "notes": "DISAGREE -- far out of range and presumably name confusion with Black-hooded Antthrush or something else; set to Rereview"
+  },
+  "AT|bargol": {
+    "resolved": true,
+    "notes": "AGREE - correctly tagged as escapee"
   }
 }
