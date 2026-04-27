@@ -342,5 +342,9 @@
   "VE|turtap1": {
     "resolved": true,
     "notes": "overdue conversion of records; eBird Central (Andrew Spencer) converted"
+  },
+  "AO|tinsun2": {
+    "resolved": true,
+    "notes": "AGREE -- Cabinda, AO, filter was badly needed and is finally in place; this and many other Congo species occur there and are now allowed by the filter"
   }
 }
