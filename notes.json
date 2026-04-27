@@ -410,5 +410,9 @@
   "CZ|wawduc1": {
     "resolved": true,
     "notes": "AGREE (?) - escapee presumed correct"
+  },
+  "DE|japgro1": {
+    "resolved": true,
+    "notes": "AGREe - photo diagnostic; correctly tagged as Escapee"
   }
 }
