@@ -419,5 +419,9 @@
   "SS|sakfal1": {
     "resolved": true,
     "notes": "DISAGREE - description just mentions brown flacon; very possible, as there is precedent south to TZ, but documentation is needed"
+  },
+  "SS|afrcuc1": {
+    "resolved": true,
+    "notes": "AGREE - record not exceptional? allowed on filter and within range (undercovered region!)"
   }
 }
