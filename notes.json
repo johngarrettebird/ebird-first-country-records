@@ -415,5 +415,9 @@
   "DE|japgro1": {
     "resolved": true,
     "notes": "AGREe - photo diagnostic; correctly tagged as Escapee"
+  },
+  "SS|sakfal1": {
+    "resolved": true,
+    "notes": "DISAGREE - description just mentions brown flacon; very possible, as there is precedent south to TZ, but documentation is needed"
   }
 }
