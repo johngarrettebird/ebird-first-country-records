@@ -423,5 +423,9 @@
   "SS|afrcuc1": {
     "resolved": true,
     "notes": "AGREE - record not exceptional? allowed on filter and within range (undercovered region!)"
+  },
+  "SS|planig1": {
+    "resolved": true,
+    "notes": "AGREE - record not exceptional? allowed on filter and within range (undercovered region!)"
   }
 }
