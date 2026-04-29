@@ -89,8 +89,8 @@ def fetch_checklist_id(country_code, species_code):
     return None
 
 
-def fetch_photo_url(species_code, country_code):
-    """Return a Macaulay Library photo thumbnail URL for this species in this country, or None."""
+def fetch_photo_info(species_code, country_code):
+    """Return {url, credit} for the top ML photo for this species/country, or {url: None, credit: None}."""
     url = (
         f"https://search.macaulaylibrary.org/api/v1/search"
         f"?taxonCode={species_code}&regionCode={country_code}"
@@ -102,16 +102,19 @@ def fetch_photo_url(species_code, country_code):
             data = json.loads(resp.read().decode())
         content = data.get("results", {}).get("content", [])
         if not content:
-            return None
+            return {"url": None, "credit": None}
         item = content[0]
-        if item.get("previewUrl"):
-            return item["previewUrl"]
-        asset_id = item.get("assetId")
-        if asset_id:
-            return f"https://cdn.download.ams.birds.cornell.edu/api/v1/asset/{asset_id}/320"
+        asset_id = str(item.get("assetId") or item.get("catalogId") or "")
+        photo_url = item.get("previewUrl") or (
+            f"https://cdn.download.ams.birds.cornell.edu/api/v1/asset/{asset_id}/320"
+            if asset_id else None
+        )
+        photographer = item.get("userDisplayName") or None
+        credit = {"name": photographer, "asset_id": asset_id} if asset_id else None
+        return {"url": photo_url, "credit": credit}
     except Exception:
         pass
-    return None
+    return {"url": None, "credit": None}
 
 
 # ── Slack ─────────────────────────────────────────────────────────────────────
@@ -212,7 +215,7 @@ def run_update():
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
                 cl_id = fetch_checklist_id(code, sp_code)
-                photo_url = fetch_photo_url(sp_code, code)
+                photo_info = fetch_photo_info(sp_code, code)
                 entry = {
                     "detected": today,
                     "country_code": code,
@@ -223,7 +226,8 @@ def run_update():
                     "ebird_url": f"https://ebird.org/species/{sp_code}/{code}",
                     "cl": cl_id,
                     "cl_url": f"https://ebird.org/checklist/{cl_id}" if cl_id else None,
-                    "photo_url": photo_url,
+                    "photo_url": photo_info["url"],
+                    "photo_credit": photo_info["credit"],
                 }
                 detections.append(entry)
                 new_this_run.append(entry)
@@ -387,7 +391,7 @@ def fix_names():
 
 
 def backfill_photos():
-    """Fetch Macaulay Library photo URLs for existing detections that are missing them."""
+    """Fetch ML photo URLs (and credits) for existing detections missing them."""
     firsts_data = load_json(NEW_FIRSTS)
     if not firsts_data or not firsts_data.get("detections"):
         sys.exit("No detections to backfill.")
@@ -396,9 +400,10 @@ def backfill_photos():
     print(f"Backfilling photos for {len(missing)} detection(s) …")
     updated = 0
     for d in missing:
-        photo_url = fetch_photo_url(d["species_code"], d["country_code"])
-        if photo_url:
-            d["photo_url"] = photo_url
+        photo_info = fetch_photo_info(d["species_code"], d["country_code"])
+        if photo_info["url"]:
+            d["photo_url"]    = photo_info["url"]
+            d["photo_credit"] = photo_info["credit"]
             print(f"  ✓  {d['country']:25s}  {d['common_name']}")
             updated += 1
         else:
@@ -406,6 +411,29 @@ def backfill_photos():
     firsts_data["detections"] = detections
     NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
     print(f"\nDone. {updated}/{len(missing)} photos found.")
+
+
+def backfill_photo_credit():
+    """Add photographer credits to existing detections that have photo_url but no photo_credit."""
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to backfill.")
+    detections = firsts_data["detections"]
+    missing = [d for d in detections if d.get("photo_url") and not d.get("photo_credit")]
+    print(f"Backfilling photo credits for {len(missing)} detection(s) …")
+    updated = 0
+    for d in missing:
+        photo_info = fetch_photo_info(d["species_code"], d["country_code"])
+        if photo_info["credit"]:
+            d["photo_credit"] = photo_info["credit"]
+            name = photo_info["credit"].get("name", "?")
+            print(f"  ✓  {d['country']:25s}  {d['common_name']}  → {name}")
+            updated += 1
+        else:
+            print(f"  –  {d['country']:25s}  {d['common_name']}  (no credit found)")
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nDone. {updated}/{len(missing)} credits filled in.")
 
 
 def backfill_checklists():
@@ -440,6 +468,8 @@ if __name__ == "__main__":
         backfill_checklists()
     elif "--backfill-photos" in sys.argv:
         backfill_photos()
+    elif "--backfill-photo-credit" in sys.argv:
+        backfill_photo_credit()
     elif "--fix-names" in sys.argv:
         fix_names()
     elif "--push" in sys.argv:

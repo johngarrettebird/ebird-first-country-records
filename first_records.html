@@ -37,11 +37,15 @@
     font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif;
   }
 
+  /* ── Banner ── */
+  .site-banner { line-height: 0; }
+  .site-banner img { width: 100%; height: 180px; object-fit: cover; object-position: center; display: block; }
+
   /* ── Header ── */
   header {
     background: var(--green);
     color: #fff;
-    padding: 16px 24px;
+    padding: 14px 24px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -52,8 +56,37 @@
   }
   header h1 { font-size: 20px; font-weight: 300; letter-spacing: -.2px; } /* Gibson Light */
   header .subtitle { font-size: 12px; opacity: .8; margin-top: 1px; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
-  .header-icon { font-size: 28px; }
   .header-right { margin-left: auto; font-size: 12px; opacity: .75; text-align: right; }
+
+  /* ── Tab bar ── */
+  .tab-bar {
+    background: var(--green2);
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    position: sticky;
+    top: 56px;
+    z-index: 99;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.7);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 600;
+    letter-spacing: .2px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: color .15s, border-color .15s;
+    flex-shrink: 0;
+  }
+  .tab:hover { color: #fff; }
+  .tab.active { color: #fff; border-bottom-color: var(--new); }
 
   /* ── Stats bar ── */
   .stats-bar {
@@ -97,8 +130,8 @@
     flex-wrap: wrap;
     align-items: center;
     position: sticky;
-    top: 58px;
-    z-index: 99;
+    top: 96px;
+    z-index: 98;
     box-shadow: var(--shadow);
   }
   .filter-bar label { font-size: 12px; color: var(--muted); font-weight: 600; }
@@ -261,24 +294,31 @@
 
   /* ── Photo thumbnail ── */
   .species-cell { display: flex; align-items: flex-start; gap: 10px; }
+  .photo-wrap { flex-shrink: 0; width: 80px; }
   .photo-thumb {
     width: 80px; height: 60px;
     object-fit: cover;
     border-radius: 4px;
     border: 1px solid var(--border);
-    flex-shrink: 0;
     display: block;
     transition: opacity .15s;
   }
   .photo-thumb:hover { opacity: .85; }
+  .photo-credit { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.3; word-break: break-word; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
 
   @media (max-width: 640px) {
+    /* Banner — shorter on mobile */
+    .site-banner img { height: 100px; }
+
     /* Header — compact, hide monitoring meta */
     header { padding: 10px 16px; gap: 8px; }
     header h1 { font-size: 16px; }
     header .subtitle { display: none; }
     .header-right { display: none; }
-    .header-icon { font-size: 22px; }
+
+    /* Tab bar — not sticky on mobile */
+    .tab-bar { position: static; }
+    .tab { padding: 8px 10px; font-size: 11px; }
 
     /* Stats bar — tighter */
     .stats-bar { gap: 16px; padding: 8px 16px; }
@@ -348,14 +388,30 @@
 </head>
 <body>
 
+<div class="site-banner">
+  <img src="2024 10 global locs map (6).png" alt="Global eBird checklist map">
+</div>
+
 <header>
-  <span class="header-icon">🐦</span>
   <div>
     <h1>eBird First Country Records</h1>
     <div class="subtitle">A Cornell Lab of Ornithology data quality tool · first approved species record per country</div>
   </div>
   <div class="header-right" id="header-meta"></div>
 </header>
+
+<div class="tab-bar" id="tab-bar">
+  <button class="tab active" data-tab="all">All</button>
+  <button class="tab" data-tab="africa">Africa</button>
+  <button class="tab" data-tab="asia">Asia</button>
+  <button class="tab" data-tab="europe">Europe</button>
+  <button class="tab" data-tab="north-america">North America</button>
+  <button class="tab" data-tab="caribbean">Caribbean</button>
+  <button class="tab" data-tab="south-america">South America</button>
+  <button class="tab" data-tab="australasia">Australasia</button>
+  <button class="tab" data-tab="pacific">Pacific</button>
+  <button class="tab" data-tab="high-seas">High Seas &amp; Antarctic</button>
+</div>
 
 <div class="stats-bar" id="stats-bar">
   <div class="stat"><strong id="stat-records">—</strong>first records</div>
@@ -399,6 +455,7 @@
     <label><input type="checkbox" id="show-new-only" checked> New detections only</label>
     <label><input type="checkbox" id="show-unresolved-only"> Hide resolved</label>
     <button id="reset-btn">Reset filters</button>
+    <button id="download-btn" class="token-btn" onclick="downloadCSV()">⬇ Download CSV</button>
     <button id="token-btn" class="token-btn" onclick="manageToken()">🔑 Set GitHub Token</button>
   </div>
 </div>
@@ -417,6 +474,9 @@
 </main>
 
 <script>
+// ── Continent map (country_code → tab slug) ───────────────────────────────────
+const CONTINENT_MAP = {"AC":"australasia","AD":"europe","AE":"asia","AF":"asia","AG":"caribbean","AI":"caribbean","AL":"europe","AM":"asia","AO":"africa","AQ":"high-seas","AR":"south-america","AS":"pacific","AT":"europe","AU":"australasia","AW":"south-america","AZ":"asia","BA":"europe","BB":"caribbean","BD":"asia","BE":"europe","BF":"africa","BG":"europe","BH":"asia","BI":"africa","BJ":"africa","BL":"caribbean","BM":"north-america","BN":"asia","BO":"south-america","BQ":"caribbean","BR":"south-america","BS":"caribbean","BT":"asia","BV":"high-seas","BW":"africa","BY":"europe","BZ":"north-america","CA":"north-america","CC":"high-seas","CD":"africa","CF":"africa","CG":"africa","CH":"europe","CI":"africa","CK":"pacific","CL":"south-america","CM":"africa","CN":"asia","CO":"south-america","CP":"north-america","CR":"north-america","CS":"australasia","CU":"caribbean","CV":"africa","CW":"south-america","CX":"high-seas","CY":"asia","CZ":"europe","DE":"europe","DJ":"africa","DK":"europe","DM":"caribbean","DO":"caribbean","DZ":"africa","EC":"south-america","EE":"europe","EG":"africa","EH":"africa","ER":"africa","ES":"europe","ET":"africa","FI":"europe","FJ":"pacific","FK":"south-america","FM":"pacific","FO":"europe","FR":"europe","GA":"africa","GB":"europe","GD":"caribbean","GE":"asia","GF":"south-america","GG":"europe","GH":"africa","GI":"europe","GL":"north-america","GM":"africa","GN":"africa","GP":"caribbean","GQ":"africa","GR":"europe","GS":"south-america","GT":"north-america","GU":"north-america","GW":"africa","GY":"south-america","HK":"asia","HM":"high-seas","HN":"north-america","HR":"europe","HT":"caribbean","HU":"europe","ID":"asia","IE":"europe","IL":"asia","IM":"europe","IN":"asia","IO":"high-seas","IQ":"asia","IR":"asia","IS":"europe","IT":"europe","JE":"europe","JM":"caribbean","JO":"asia","JP":"asia","KE":"africa","KG":"asia","KH":"asia","KI":"pacific","KM":"high-seas","KN":"caribbean","KP":"asia","KR":"asia","KW":"asia","KY":"caribbean","KZ":"asia","LA":"asia","LB":"asia","LC":"caribbean","LI":"europe","LK":"asia","LR":"africa","LS":"africa","LT":"europe","LU":"europe","LV":"europe","LY":"africa","MA":"africa","MC":"europe","MD":"europe","ME":"europe","MF":"caribbean","MG":"africa","MH":"pacific","MK":"europe","ML":"africa","MM":"asia","MN":"asia","MO":"asia","MP":"pacific","MQ":"caribbean","MR":"africa","MS":"caribbean","MT":"europe","MU":"high-seas","MV":"asia","MW":"africa","MX":"north-america","MY":"asia","MZ":"africa","NC":"australasia","NE":"africa","NF":"australasia","NG":"africa","NI":"north-america","NL":"europe","NO":"europe","NP":"asia","NR":"pacific","NU":"pacific","NZ":"australasia","OM":"asia","PA":"north-america","PE":"south-america","PF":"pacific","PG":"australasia","PH":"asia","PK":"asia","PL":"europe","PM":"north-america","PN":"pacific","PR":"caribbean","PS":"asia","PT":"europe","PW":"pacific","PY":"south-america","QA":"asia","RE":"high-seas","RO":"europe","RS":"europe","RU":"asia","RW":"africa","SA":"asia","SB":"australasia","SC":"africa","SD":"africa","SE":"europe","SG":"asia","SH":"high-seas","SI":"europe","SJ":"europe","SK":"europe","SL":"africa","SM":"europe","SN":"africa","SO":"africa","SR":"south-america","SS":"africa","ST":"africa","SV":"north-america","SX":"caribbean","SY":"asia","SZ":"africa","TC":"caribbean","TD":"africa","TF":"high-seas","TG":"africa","TH":"asia","TJ":"asia","TK":"pacific","TL":"asia","TM":"asia","TN":"africa","TO":"pacific","TR":"asia","TT":"south-america","TV":"pacific","TW":"asia","TZ":"africa","UA":"europe","UG":"africa","UM":"pacific","US":"north-america","UY":"south-america","UZ":"asia","VA":"europe","VC":"caribbean","VE":"south-america","VG":"caribbean","VI":"caribbean","VN":"asia","VU":"pacific","WF":"pacific","WS":"pacific","XK":"europe","XX":"high-seas","YE":"asia","YT":"high-seas","ZA":"africa","ZM":"africa","ZW":"africa"};
+
 // ── GitHub API ───────────────────────────────────────────────────────────────
 const REPO       = "johngarrettebird/ebird-first-country-records";
 const NOTES_FILE = "notes.json";
@@ -555,6 +615,74 @@ async function saveNote(key) {
   }
 }
 
+// ── Tab navigation ───────────────────────────────────────────────────────────
+let activeTab = "all";
+
+function setTab(slug) {
+  activeTab = slug;
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === slug);
+  });
+  window.location.hash = slug === "all" ? "" : slug;
+  page = 1;
+  applyFilters();
+}
+
+document.getElementById("tab-bar").addEventListener("click", e => {
+  const btn = e.target.closest(".tab");
+  if (btn) setTab(btn.dataset.tab);
+});
+
+function updateTabCounts() {
+  const counts = {};
+  newRecords.forEach(r => {
+    const slug = CONTINENT_MAP[r.country_code] || "all";
+    counts[slug] = (counts[slug] || 0) + 1;
+  });
+  const total = newRecords.length;
+  document.querySelectorAll(".tab").forEach(btn => {
+    const slug  = btn.dataset.tab;
+    const label = btn.textContent.replace(/ \(\d+\)$/, "");
+    const n     = slug === "all" ? total : (counts[slug] || 0);
+    btn.textContent = n > 0 ? `${label} (${n})` : label;
+  });
+}
+
+// ── Download CSV ─────────────────────────────────────────────────────────────
+function csvEscape(val) {
+  const s = val == null ? "" : String(val);
+  return s.includes(",") || s.includes('"') || s.includes("\n")
+    ? '"' + s.replace(/"/g, '""') + '"'
+    : s;
+}
+
+function downloadCSV() {
+  const headers = ["Common Name","Scientific Name","Country","Date Detected","Checklist URL","Status","Notes","Alternate Species ID"];
+  const exportRecords = allRecords.filter(r => newCodes.has(`${r.cc}|${r.tc || ""}`));
+  const rows = exportRecords.map(r => {
+    const key    = `${r.cc}|${r.tc || ""}`;
+    const note   = notesMap[key] || {};
+    const status = note.resolved ? "Resolved" : "Unreviewed";
+    const clUrl  = r.cl ? `https://ebird.org/checklist/${r.cl}` : "";
+    return [r.sn, r.sc, r.cn, r.fd || "", clUrl, status, note.notes || "", note.alt_id || ""].map(csvEscape).join(",");
+  });
+  const csv  = [headers.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  const date = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `ebird_first_country_records_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Photo credit helper ───────────────────────────────────────────────────────
+function extractAssetId(url) {
+  const m = url && url.match(/asset\/(\d+)/);
+  return m ? m[1] : "";
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 let allRecords  = [];   // from first_records.json
 let newRecords  = [];   // from new_firsts.json
@@ -570,6 +698,16 @@ let sortDesc = true;
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function init() {
   updateTokenBtn();
+
+  // Set tab from URL hash
+  const hash = window.location.hash.replace("#", "");
+  const validTabs = ["all","africa","asia","europe","north-america","caribbean","south-america","australasia","pacific","high-seas"];
+  if (hash && validTabs.includes(hash)) {
+    activeTab = hash;
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.tab === hash);
+    });
+  }
 
   let mainData = null;
 
@@ -601,6 +739,7 @@ async function init() {
       monitorData = await newResp.json();
       newRecords = monitorData.detections || [];
       newCodes = new Set(newRecords.map(r => `${r.country_code}|${r.species_code}`));
+      updateTabCounts();
     }
   } catch (_) { /* no monitor data yet */ }
 
@@ -616,10 +755,11 @@ async function init() {
       if (!det) return r;
       return {
         ...r,
-        cl:       r.cl       || det.cl        || null,
-        fd:       r.fd       || det.detected  || null,
-        url:      r.url      || det.ebird_url || null,
-        photo_url: r.photo_url || det.photo_url || null,
+        cl:           r.cl           || det.cl           || null,
+        fd:           r.fd           || det.detected     || null,
+        url:          r.url          || det.ebird_url    || null,
+        photo_url:    r.photo_url    || det.photo_url    || null,
+        photo_credit: r.photo_credit || det.photo_credit || null,
       };
     });
 
@@ -628,15 +768,16 @@ async function init() {
     const toAdd = newRecords
       .filter(r => !existingKeys.has(`${r.country_code}|${r.species_code}`))
       .map(r => ({
-        cc: r.country_code,
-        cn: r.country,
-        sn: r.common_name,
-        sc: r.scientific_name,
-        tc: r.species_code,
-        fd:        r.detected   || null,
-        cl:        r.cl         || null,
-        url:       r.ebird_url  || null,
-        photo_url: r.photo_url  || null,
+        cc:           r.country_code,
+        cn:           r.country,
+        sn:           r.common_name,
+        sc:           r.scientific_name,
+        tc:           r.species_code,
+        fd:           r.detected      || null,
+        cl:           r.cl            || null,
+        url:          r.ebird_url     || null,
+        photo_url:    r.photo_url     || null,
+        photo_credit: r.photo_credit  || null,
       }));
     allRecords = allRecords.concat(toAdd);
   }
@@ -714,6 +855,9 @@ function applyFilters() {
   const hideResolved   = document.getElementById("show-unresolved-only").checked;
 
   filtered = allRecords.filter(r => {
+    if (activeTab !== "all") {
+      if ((CONTINENT_MAP[r.cc] || "all") !== activeTab) return false;
+    }
     if (country && r.cn !== country) return false;
     const year = r.fd ? parseInt(r.fd.substring(0, 4)) : 0;
     if (year < yFrom || year > yTo) return false;
@@ -794,7 +938,14 @@ function render() {
         <td data-label="Country">${escHtml(r.cn)}</td>
         <td data-label="Species">
           <div class="species-cell">
-            ${r.photo_url ? `<a href="${r.photo_url.replace('/320','1800')}" target="_blank"><img class="photo-thumb" src="${r.photo_url}" alt="${escHtml(r.sn)}" loading="lazy"></a>` : ''}
+            ${r.photo_url ? (() => {
+              const credit = r.photo_credit;
+              const assetId = credit?.asset_id || extractAssetId(r.photo_url);
+              const creditHtml = credit?.name
+                ? `<div class="photo-credit">&#169; ${escHtml(credit.name)} / ML${assetId}</div>`
+                : "";
+              return `<div class="photo-wrap"><a href="${r.photo_url.replace('/320','1800').replace(/\/$/, '/1800')}" target="_blank"><img class="photo-thumb" src="${r.photo_url}" alt="${escHtml(r.sn)}" loading="lazy"></a>${creditHtml}</div>`;
+            })() : ''}
             <div>
               <span class="species-name">${escHtml(r.sn)}${newBadge}</span>
               <span class="sci-name sci-inline">${escHtml(r.sc)}</span>
