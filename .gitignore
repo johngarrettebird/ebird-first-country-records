@@ -8,3 +8,6 @@ config.json
 
 # macOS noise
 .DS_Store
+
+# Reviewer email data — local only, not for public repo
+reviewers.json

@@ -89,6 +89,13 @@ def fetch_checklist_id(country_code, species_code):
     return None
 
 
+def fetch_subnational_code(checklist_id):
+    """Return subnational1Code for this checklist, or None."""
+    result = api_get(f"product/checklist/view/{checklist_id}")
+    time.sleep(DELAY)
+    return result.get("subnational1Code") if isinstance(result, dict) else None
+
+
 def fetch_photo_info(species_code, country_code):
     """Return {url, credit} for the top ML photo for this species/country, or {url: None, credit: None}."""
     url = (
@@ -215,6 +222,7 @@ def run_update():
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
                 cl_id = fetch_checklist_id(code, sp_code)
+                subnational_code = fetch_subnational_code(cl_id) if cl_id else None
                 photo_info = fetch_photo_info(sp_code, code)
                 entry = {
                     "detected": today,
@@ -226,6 +234,7 @@ def run_update():
                     "ebird_url": f"https://ebird.org/species/{sp_code}/{code}",
                     "cl": cl_id,
                     "cl_url": f"https://ebird.org/checklist/{cl_id}" if cl_id else None,
+                    "subnational_code": subnational_code,
                     "photo_url": photo_info["url"],
                     "photo_credit": photo_info["credit"],
                 }
@@ -459,6 +468,28 @@ def backfill_checklists():
     print(f"\nDone. {updated}/{len(missing)} checklist IDs filled in.")
 
 
+def backfill_subnational():
+    """Add subnational1Code to existing detections that have a checklist ID but no subnational_code."""
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to backfill.")
+    detections = firsts_data["detections"]
+    missing = [d for d in detections if d.get("cl") and not d.get("subnational_code")]
+    print(f"Backfilling subnational codes for {len(missing)} detection(s) …")
+    updated = 0
+    for d in missing:
+        sub = fetch_subnational_code(d["cl"])
+        if sub:
+            d["subnational_code"] = sub
+            print(f"  ✓  {d['country']:25s}  {d['common_name']}  → {sub}")
+            updated += 1
+        else:
+            print(f"  –  {d['country']:25s}  {d['common_name']}  (not found)")
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nDone. {updated}/{len(missing)} subnational codes filled in.")
+
+
 if __name__ == "__main__":
     if "--status" in sys.argv:
         show_status()
@@ -470,6 +501,8 @@ if __name__ == "__main__":
         backfill_photos()
     elif "--backfill-photo-credit" in sys.argv:
         backfill_photo_credit()
+    elif "--backfill-subnational" in sys.argv:
+        backfill_subnational()
     elif "--fix-names" in sys.argv:
         fix_names()
     elif "--push" in sys.argv:
