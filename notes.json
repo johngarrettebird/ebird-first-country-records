@@ -438,7 +438,13 @@
   },
   "EC|fescoq3": {
     "resolved": true,
-    "notes": "DISAGREE -- presumably intended to be Lophornis verreauxii or something else?"
+    "notes": "DISAGREE -- presumably intended to be Lophornis verreauxii or something else?",
+    "alt_id": {
+      "code": "fescoq2",
+      "name": "Butterfly Coquette",
+      "sci": "Lophornis verreauxii",
+      "cat": "species"
+    }
   },
   "NA|wooduc": {
     "resolved": true,
