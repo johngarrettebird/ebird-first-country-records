@@ -330,7 +330,13 @@
   },
   "EC|bkhant7": {
     "resolved": true,
-    "notes": "DISAGREE -- far out of range and presumably name confusion with Black-hooded Antthrush or something else; set to Rereview"
+    "notes": "DISAGREE -- far out of range and presumably name confusion with Black-hooded Antthrush or something else; set to Rereview",
+    "alt_id": {
+      "code": "bkhant8",
+      "name": "Black-hooded Antthrush",
+      "sci": "Formicarius destructus",
+      "cat": "species"
+    }
   },
   "AT|bargol": {
     "resolved": true,
