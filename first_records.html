@@ -1196,7 +1196,8 @@ Checklist: ${clUrl}
 Thank you for your dedication to eBird review.`;
 
   window.location.href = "mailto:" + reviewers.map(rv => rv.email).join(",") +
-    "?subject=" + encodeURIComponent(subject) +
+    "?cc=jfg228%40cornell.edu%2Cmji26%40cornell.edu" +
+    "&subject=" + encodeURIComponent(subject) +
     "&body="    + encodeURIComponent(body);
 }
 
