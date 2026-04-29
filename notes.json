@@ -466,5 +466,9 @@
   },
   "SE|x00379": {
     "notes": "AGREE - photos; I adjusted to be an escapee (should check with reviewer)"
+  },
+  "TR|sacibi2": {
+    "resolved": true,
+    "notes": "AGREE - photos; defaults to escapee in matrix"
   }
 }
