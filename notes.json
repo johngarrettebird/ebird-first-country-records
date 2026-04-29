@@ -473,5 +473,8 @@
   },
   "JE|eurnig1": {
     "notes": "AGREE - first record; MJI should follow up to maybe add as Sensitive species?"
+  },
+  "SS|yebapa1": {
+    "notes": "AGREE - expected record, allowed on filter, from underbirded area"
   }
 }
