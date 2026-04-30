@@ -98,23 +98,11 @@
   },
   "RU|amepip": {
     "resolved": true,
-    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted",
-    "alt_id": {
-      "code": "sibpip1",
-      "name": "Siberian Pipit",
-      "sci": "Anthus japonicus",
-      "cat": "species"
-    }
+    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted"
   },
   "RU|whwsco2": {
     "resolved": true,
-    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted",
-    "alt_id": {
-      "code": "whwsco1",
-      "name": "Stejneger's Scoter",
-      "sci": "Melanitta stejnegeri",
-      "cat": "species"
-    }
+    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted"
   },
   "SM|eurcoo": {
     "resolved": true,
@@ -342,13 +330,7 @@
   },
   "EC|bkhant7": {
     "resolved": true,
-    "notes": "DISAGREE -- far out of range and presumably name confusion with Black-hooded Antthrush or something else; set to Rereview",
-    "alt_id": {
-      "code": "bkhant8",
-      "name": "Black-hooded Antthrush",
-      "sci": "Formicarius destructus",
-      "cat": "species"
-    }
+    "notes": "DISAGREE -- far out of range and presumably name confusion with Black-hooded Antthrush or something else; set to Rereview"
   },
   "AT|bargol": {
     "resolved": true,
@@ -456,13 +438,7 @@
   },
   "EC|fescoq3": {
     "resolved": true,
-    "notes": "DISAGREE -- presumably intended to be Lophornis verreauxii or something else?",
-    "alt_id": {
-      "code": "fescoq2",
-      "name": "Butterfly Coquette",
-      "sci": "Lophornis verreauxii",
-      "cat": "species"
-    }
+    "notes": "DISAGREE -- presumably intended to be Lophornis verreauxii or something else?"
   },
   "NA|wooduc": {
     "resolved": true,
@@ -512,24 +488,5 @@
   "MD|cetwar1": {
     "resolved": true,
     "notes": "AGREE -- no documentation, but accepted; clearly within expected range in far south of country"
-  },
-  "CY|strher2": {
-    "notes": "Vagrant, but taxonomic confusion with recently split Little Heron",
-    "alt_id": {
-      "code": "strher1",
-      "name": "Little Heron",
-      "sci": "Butorides atricapilla",
-      "cat": "species"
-    }
-  },
-  "CA|afmdov1": {
-    "resolved": true,
-    "notes": "Similarly-named Mourning Dove",
-    "alt_id": {
-      "code": "moudov",
-      "name": "Mourning Dove",
-      "sci": "Zenaida macroura",
-      "cat": "species"
-    }
   }
 }
