@@ -521,5 +521,15 @@
       "sci": "Butorides atricapilla",
       "cat": "species"
     }
+  },
+  "CA|afmdov1": {
+    "resolved": true,
+    "notes": "Similarly-named Mourning Dove",
+    "alt_id": {
+      "code": "moudov",
+      "name": "Mourning Dove",
+      "sci": "Zenaida macroura",
+      "cat": "species"
+    }
   }
 }
