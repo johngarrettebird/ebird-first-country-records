@@ -103,7 +103,7 @@ def fetch_subnational_code(checklist_id):
 
 
 def fetch_photo_info(species_code, country_code):
-    """Return {url, credit} for the top ML photo for this species/country, or {url: None, credit: None}."""
+    """Return {url, credit, cl} for the top ML photo for this species/country."""
     url = (
         f"https://search.macaulaylibrary.org/api/v1/search"
         f"?taxonCode={species_code}&regionCode={country_code}"
@@ -115,7 +115,7 @@ def fetch_photo_info(species_code, country_code):
             data = json.loads(resp.read().decode())
         content = data.get("results", {}).get("content", [])
         if not content:
-            return {"url": None, "credit": None}
+            return {"url": None, "credit": None, "cl": None}
         item = content[0]
         asset_id = str(item.get("assetId") or item.get("catalogId") or "")
         photo_url = item.get("previewUrl") or (
@@ -124,10 +124,11 @@ def fetch_photo_info(species_code, country_code):
         )
         photographer = item.get("userDisplayName") or None
         credit = {"name": photographer, "asset_id": asset_id} if asset_id else None
-        return {"url": photo_url, "credit": credit}
+        ml_cl = item.get("eBirdChecklistId") or None
+        return {"url": photo_url, "credit": credit, "cl": ml_cl}
     except Exception:
         pass
-    return {"url": None, "credit": None}
+    return {"url": None, "credit": None, "cl": None}
 
 
 # ── Slack ─────────────────────────────────────────────────────────────────────
@@ -227,11 +228,13 @@ def run_update():
             print(f"  → {len(newly_added)} new species detected", end="")
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
-                obs_data         = fetch_obs_data(code, sp_code)
-                cl_id            = obs_data["cl"]
-                exotic_category  = obs_data["exotic_category"]
+                obs_data        = fetch_obs_data(code, sp_code)
+                cl_id           = obs_data["cl"]
+                exotic_category = obs_data["exotic_category"]
+                photo_info      = fetch_photo_info(sp_code, code)
+                if not cl_id and photo_info.get("cl"):
+                    cl_id = photo_info["cl"]   # fall back to ML asset's checklist
                 subnational_code = fetch_subnational_code(cl_id) if cl_id else None
-                photo_info = fetch_photo_info(sp_code, code)
                 entry = {
                     "detected": today,
                     "country_code": code,
@@ -477,6 +480,33 @@ def backfill_checklists():
     print(f"\nDone. {updated}/{len(missing)} checklist IDs filled in.")
 
 
+def backfill_cl_from_photo():
+    """For detections without a checklist ID, try to get one from the ML photo API."""
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to backfill.")
+    detections = firsts_data["detections"]
+    missing = [d for d in detections if not d.get("cl")]
+    print(f"Attempting to find checklist IDs via ML for {len(missing)} detection(s) …")
+    updated = 0
+    for d in missing:
+        info = fetch_photo_info(d["species_code"], d["country_code"])
+        if info.get("cl"):
+            d["cl"]     = info["cl"]
+            d["cl_url"] = f"https://ebird.org/checklist/{info['cl']}"
+            if not d.get("subnational_code"):
+                sub = fetch_subnational_code(info["cl"])
+                if sub:
+                    d["subnational_code"] = sub
+            print(f"  ✓  {d['country']:25s}  {d['common_name']}  → {info['cl']}")
+            updated += 1
+        else:
+            print(f"  –  {d['country']:25s}  {d['common_name']}")
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nDone. {updated}/{len(missing)} checklist IDs recovered via ML.")
+
+
 def backfill_exotic_category():
     """Add exotic_category to detections that have a checklist ID but haven't been checked yet."""
     firsts_data = load_json(NEW_FIRSTS)
@@ -539,6 +569,8 @@ if __name__ == "__main__":
         backfill_photos()
     elif "--backfill-photo-credit" in sys.argv:
         backfill_photo_credit()
+    elif "--backfill-cl-from-photo" in sys.argv:
+        backfill_cl_from_photo()
     elif "--backfill-exotic" in sys.argv:
         backfill_exotic_category()
     elif "--backfill-subnational" in sys.argv:
