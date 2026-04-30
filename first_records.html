@@ -305,6 +305,7 @@
   }
   .photo-thumb:hover { opacity: .85; }
   .photo-credit { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.3; word-break: break-word; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
+  .exotic-icon { width: 16px; height: 16px; vertical-align: middle; margin-left: 4px; }
 
   /* ── Email button ── */
   .email-btn { background: none; border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; font-size: 11px; cursor: pointer; color: var(--muted); margin-top: 4px; margin-left: 4px; display: inline-block; font-family: 'Gibson', 'Helvetica Neue', Arial, sans-serif; }
@@ -511,6 +512,10 @@
 </main>
 
 <script>
+// ── Exotic category icons ────────────────────────────────────────────────────
+const EXOTIC_ICON  = { "X": "escapee.png", "N": "naturalized.png", "P": "provisional.png" };
+const EXOTIC_LABEL = { "X": "Escapee", "N": "Naturalized", "P": "Provisional" };
+
 // ── Continent map (country_code → tab slug) ───────────────────────────────────
 const CONTINENT_MAP = {"AC":"australasia","AD":"europe","AE":"asia","AF":"asia","AG":"caribbean","AI":"caribbean","AL":"europe","AM":"asia","AO":"africa","AQ":"high-seas","AR":"south-america","AS":"pacific","AT":"europe","AU":"australasia","AW":"south-america","AZ":"asia","BA":"europe","BB":"caribbean","BD":"asia","BE":"europe","BF":"africa","BG":"europe","BH":"asia","BI":"africa","BJ":"africa","BL":"caribbean","BM":"north-america","BN":"asia","BO":"south-america","BQ":"caribbean","BR":"south-america","BS":"caribbean","BT":"asia","BV":"high-seas","BW":"africa","BY":"europe","BZ":"north-america","CA":"north-america","CC":"high-seas","CD":"africa","CF":"africa","CG":"africa","CH":"europe","CI":"africa","CK":"pacific","CL":"south-america","CM":"africa","CN":"asia","CO":"south-america","CP":"north-america","CR":"north-america","CS":"australasia","CU":"caribbean","CV":"africa","CW":"south-america","CX":"high-seas","CY":"asia","CZ":"europe","DE":"europe","DJ":"africa","DK":"europe","DM":"caribbean","DO":"caribbean","DZ":"africa","EC":"south-america","EE":"europe","EG":"africa","EH":"africa","ER":"africa","ES":"europe","ET":"africa","FI":"europe","FJ":"pacific","FK":"south-america","FM":"pacific","FO":"europe","FR":"europe","GA":"africa","GB":"europe","GD":"caribbean","GE":"asia","GF":"south-america","GG":"europe","GH":"africa","GI":"europe","GL":"north-america","GM":"africa","GN":"africa","GP":"caribbean","GQ":"africa","GR":"europe","GS":"south-america","GT":"north-america","GU":"north-america","GW":"africa","GY":"south-america","HK":"asia","HM":"high-seas","HN":"north-america","HR":"europe","HT":"caribbean","HU":"europe","ID":"asia","IE":"europe","IL":"asia","IM":"europe","IN":"asia","IO":"high-seas","IQ":"asia","IR":"asia","IS":"europe","IT":"europe","JE":"europe","JM":"caribbean","JO":"asia","JP":"asia","KE":"africa","KG":"asia","KH":"asia","KI":"pacific","KM":"high-seas","KN":"caribbean","KP":"asia","KR":"asia","KW":"asia","KY":"caribbean","KZ":"asia","LA":"asia","LB":"asia","LC":"caribbean","LI":"europe","LK":"asia","LR":"africa","LS":"africa","LT":"europe","LU":"europe","LV":"europe","LY":"africa","MA":"africa","MC":"europe","MD":"europe","ME":"europe","MF":"caribbean","MG":"africa","MH":"pacific","MK":"europe","ML":"africa","MM":"asia","MN":"asia","MO":"asia","MP":"pacific","MQ":"caribbean","MR":"africa","MS":"caribbean","MT":"europe","MU":"high-seas","MV":"asia","MW":"africa","MX":"north-america","MY":"asia","MZ":"africa","NC":"australasia","NE":"africa","NF":"australasia","NG":"africa","NI":"north-america","NL":"europe","NO":"europe","NP":"asia","NR":"pacific","NU":"pacific","NZ":"australasia","OM":"asia","PA":"north-america","PE":"south-america","PF":"pacific","PG":"australasia","PH":"asia","PK":"asia","PL":"europe","PM":"north-america","PN":"pacific","PR":"caribbean","PS":"asia","PT":"europe","PW":"pacific","PY":"south-america","QA":"asia","RE":"high-seas","RO":"europe","RS":"europe","RU":"asia","RW":"africa","SA":"asia","SB":"australasia","SC":"africa","SD":"africa","SE":"europe","SG":"asia","SH":"high-seas","SI":"europe","SJ":"europe","SK":"europe","SL":"africa","SM":"europe","SN":"africa","SO":"africa","SR":"south-america","SS":"africa","ST":"africa","SV":"north-america","SX":"caribbean","SY":"asia","SZ":"africa","TC":"caribbean","TD":"africa","TF":"high-seas","TG":"africa","TH":"asia","TJ":"asia","TK":"pacific","TL":"asia","TM":"asia","TN":"africa","TO":"pacific","TR":"asia","TT":"south-america","TV":"pacific","TW":"asia","TZ":"africa","UA":"europe","UG":"africa","UM":"pacific","US":"north-america","UY":"south-america","UZ":"asia","VA":"europe","VC":"caribbean","VE":"south-america","VG":"caribbean","VI":"caribbean","VN":"asia","VU":"pacific","WF":"pacific","WS":"pacific","XK":"europe","XX":"high-seas","YE":"asia","YT":"high-seas","ZA":"africa","ZM":"africa","ZW":"africa"};
 
@@ -825,6 +830,7 @@ async function init() {
         photo_url:        r.photo_url        || det.photo_url        || null,
         photo_credit:     r.photo_credit     || det.photo_credit     || null,
         subnational_code: r.subnational_code || det.subnational_code || null,
+        exotic_category:  r.exotic_category  || det.exotic_category  || null,
       };
     });
 
@@ -844,6 +850,7 @@ async function init() {
         photo_url:        r.photo_url        || null,
         photo_credit:     r.photo_credit     || null,
         subnational_code: r.subnational_code || null,
+        exotic_category:  r.exotic_category  || null,
       }));
     allRecords = allRecords.concat(toAdd);
   }
@@ -988,6 +995,9 @@ function render() {
     const isNew = newCodes.has(`${r.cc}|${r.tc || ""}`) ||
                   newRecords.some(n => n.country_code === r.cc && n.common_name === r.sn);
     const newBadge = isNew ? '<span class="flag-new">NEW</span>' : "";
+    const exoticHtml = r.exotic_category && EXOTIC_ICON[r.exotic_category]
+      ? `<img src="${EXOTIC_ICON[r.exotic_category]}" class="exotic-icon" alt="${r.exotic_category}" title="${EXOTIC_LABEL[r.exotic_category]}">`
+      : "";
     const speciesLink = `<a class="cl-link" href="${r.url || 'https://ebird.org/species/' + r.tc + '/' + r.cc}" target="_blank">Species page ↗</a>`;
     const clLink = r.cl
       ? `<a class="cl-link" href="https://ebird.org/checklist/${r.cl}" target="_blank">Checklist ↗</a> · ${speciesLink}`
@@ -1007,13 +1017,14 @@ function render() {
             ${r.photo_url ? (() => {
               const credit = r.photo_credit;
               const assetId = credit?.asset_id || extractAssetId(r.photo_url);
+              const mlLink  = assetId ? `https://macaulaylibrary.org/asset/${assetId}` : r.photo_url.replace('/320','1800').replace(/\/$/, '/1800');
               const creditHtml = credit?.name
                 ? `<div class="photo-credit">&#169; ${escHtml(credit.name)} / ML${assetId}</div>`
                 : "";
-              return `<div class="photo-wrap"><a href="${r.photo_url.replace('/320','1800').replace(/\/$/, '/1800')}" target="_blank"><img class="photo-thumb" src="${r.photo_url}" alt="${escHtml(r.sn)}" loading="lazy"></a>${creditHtml}</div>`;
+              return `<div class="photo-wrap"><a href="${mlLink}" target="_blank"><img class="photo-thumb" src="${r.photo_url}" alt="${escHtml(r.sn)}" loading="lazy"></a>${creditHtml}</div>`;
             })() : ''}
             <div>
-              <span class="species-name">${escHtml(r.sn)}${newBadge}</span>
+              <span class="species-name">${escHtml(r.sn)}${newBadge}${exoticHtml}</span>
               <span class="sci-name sci-inline">${escHtml(r.sc)}</span>
             </div>
           </div>

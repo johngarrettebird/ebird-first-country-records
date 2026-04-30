@@ -80,13 +80,19 @@ def fetch_spplist(country_code):
     return result if isinstance(result, list) else []
 
 
-def fetch_checklist_id(country_code, species_code):
-    """Return the most recent checklist subId for this species in this country, or None."""
+def fetch_obs_data(country_code, species_code):
+    """Return {"cl": subId, "exotic_category": exoticCategory} from the most recent obs, or nulls."""
     result = api_get(f"data/obs/{country_code}/recent/{species_code}", "back=30")
     time.sleep(DELAY)
     if result and isinstance(result, list):
-        return result[0].get("subId")
-    return None
+        obs = result[0]
+        return {"cl": obs.get("subId"), "exotic_category": obs.get("exoticCategory")}
+    return {"cl": None, "exotic_category": None}
+
+
+def fetch_checklist_id(country_code, species_code):
+    """Return the most recent checklist subId for this species in this country, or None."""
+    return fetch_obs_data(country_code, species_code)["cl"]
 
 
 def fetch_subnational_code(checklist_id):
@@ -221,7 +227,9 @@ def run_update():
             print(f"  → {len(newly_added)} new species detected", end="")
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
-                cl_id = fetch_checklist_id(code, sp_code)
+                obs_data         = fetch_obs_data(code, sp_code)
+                cl_id            = obs_data["cl"]
+                exotic_category  = obs_data["exotic_category"]
                 subnational_code = fetch_subnational_code(cl_id) if cl_id else None
                 photo_info = fetch_photo_info(sp_code, code)
                 entry = {
@@ -235,6 +243,7 @@ def run_update():
                     "cl": cl_id,
                     "cl_url": f"https://ebird.org/checklist/{cl_id}" if cl_id else None,
                     "subnational_code": subnational_code,
+                    "exotic_category": exotic_category,
                     "photo_url": photo_info["url"],
                     "photo_credit": photo_info["credit"],
                 }
@@ -468,6 +477,35 @@ def backfill_checklists():
     print(f"\nDone. {updated}/{len(missing)} checklist IDs filled in.")
 
 
+def backfill_exotic_category():
+    """Add exotic_category to detections that have a checklist ID but haven't been checked yet."""
+    firsts_data = load_json(NEW_FIRSTS)
+    if not firsts_data or not firsts_data.get("detections"):
+        sys.exit("No detections to backfill.")
+    detections = firsts_data["detections"]
+    missing = [d for d in detections if d.get("cl") and "exotic_category" not in d]
+    print(f"Backfilling exotic categories for {len(missing)} detection(s) …")
+    found = 0
+    for d in missing:
+        result = api_get(f"product/checklist/view/{d['cl']}")
+        time.sleep(DELAY)
+        exotic = None
+        if isinstance(result, dict):
+            for obs in result.get("obs", []):
+                if obs.get("speciesCode") == d["species_code"]:
+                    exotic = obs.get("exoticCategory")
+                    break
+        d["exotic_category"] = exotic
+        if exotic:
+            print(f"  {exotic}  {d['country']:25s}  {d['common_name']}")
+            found += 1
+        else:
+            print(f"  –  {d['country']:25s}  {d['common_name']}")
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"\nDone. {found} exotic categories found out of {len(missing)} checked.")
+
+
 def backfill_subnational():
     """Add subnational1Code to existing detections that have a checklist ID but no subnational_code."""
     firsts_data = load_json(NEW_FIRSTS)
@@ -501,6 +539,8 @@ if __name__ == "__main__":
         backfill_photos()
     elif "--backfill-photo-credit" in sys.argv:
         backfill_photo_credit()
+    elif "--backfill-exotic" in sys.argv:
+        backfill_exotic_category()
     elif "--backfill-subnational" in sys.argv:
         backfill_subnational()
     elif "--fix-names" in sys.argv:
