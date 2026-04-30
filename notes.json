@@ -108,7 +108,13 @@
   },
   "RU|whwsco2": {
     "resolved": true,
-    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted"
+    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted",
+    "alt_id": {
+      "code": "whwsco1",
+      "name": "Stejneger's Scoter",
+      "sci": "Melanitta stejnegeri",
+      "cat": "species"
+    }
   },
   "SM|eurcoo": {
     "resolved": true,
