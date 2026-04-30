@@ -512,5 +512,14 @@
   "MD|cetwar1": {
     "resolved": true,
     "notes": "AGREE -- no documentation, but accepted; clearly within expected range in far south of country"
+  },
+  "CY|strher2": {
+    "notes": "Vagrant, but taxonomic confusion with recently split Little Heron",
+    "alt_id": {
+      "code": "strher1",
+      "name": "Little Heron",
+      "sci": "Butorides atricapilla",
+      "cat": "species"
+    }
   }
 }
