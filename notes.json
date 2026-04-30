@@ -98,7 +98,13 @@
   },
   "RU|amepip": {
     "resolved": true,
-    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted"
+    "notes": "DISAGREE -- taxonomy error by user and reviewer; reviewer contacted",
+    "alt_id": {
+      "code": "sibpip1",
+      "name": "Siberian Pipit",
+      "sci": "Anthus japonicus",
+      "cat": "species"
+    }
   },
   "RU|whwsco2": {
     "resolved": true,
