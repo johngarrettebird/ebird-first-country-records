@@ -218,6 +218,12 @@
   .cl-link:hover { text-decoration: underline; }
   .flag-new { color: var(--green2); font-size: 11px; font-weight: 700; margin-left: 4px; }  /* Forest Green Shade */
 
+  /* ── World first records ── */
+  :root { --red: #B31B1B; --red-bg: #FFF2F2; }
+  tr.world-first td { background: var(--red-bg) !important; }
+  tr.world-first:hover td { background: #FFE4E4 !important; }
+  .flag-world { color: var(--red); font-size: 11px; font-weight: 700; margin-left: 4px; letter-spacing: .2px; }
+
   /* ── Notes ── */
   tr.resolved td { background: #F5F3E9 !important; color: var(--muted); }  /* Sand — softer than grey */
   tr.resolved .species-name { text-decoration: line-through; color: var(--muted); }
@@ -577,12 +583,16 @@ function startEdit(key) {
   if (!cell) return;
   const safeKey   = key.replace("|", "__");
   const note      = notesMap[key] || {};
-  const altIdAttr = note.alt_id ? JSON.stringify(note.alt_id).replace(/"/g, "&quot;") : "";
-  const altIdText = note.alt_id ? escHtml(note.alt_id.name) : "";
+  const altIdAttr  = note.alt_id ? JSON.stringify(note.alt_id).replace(/"/g, "&quot;") : "";
+  const altIdText  = note.alt_id ? escHtml(note.alt_id.name) : "";
+  const rec        = allRecords.find(r => `${r.cc}|${r.tc || ""}` === key) || {};
   cell.innerHTML = `
     <div class="note-editor">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px">
         <input type="checkbox" id="re-${safeKey}" ${note.resolved ? "checked" : ""}> Resolved
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:4px">
+        <input type="checkbox" id="wf-${safeKey}" ${rec.world_first ? "checked" : ""}> World first eBird record
       </label>
       <textarea id="nt-${safeKey}" rows="3" placeholder="Add notes…">${note.notes ? note.notes.replace(/</g,"&lt;") : ""}</textarea>
       <label style="font-size:12px;margin-top:6px;display:block">Suspected ID</label>
@@ -600,10 +610,11 @@ function startEdit(key) {
 }
 
 async function saveNote(key) {
-  const safeKey  = key.replace("|", "__");
-  const resolved = document.getElementById("re-" + safeKey).checked;
-  const text     = document.getElementById("nt-" + safeKey).value.trim();
-  const altIdRaw = document.getElementById("acv-" + safeKey)?.value || "";
+  const safeKey   = key.replace("|", "__");
+  const resolved  = document.getElementById("re-" + safeKey).checked;
+  const worldFirst = document.getElementById("wf-" + safeKey)?.checked || false;
+  const text      = document.getElementById("nt-" + safeKey).value.trim();
+  const altIdRaw  = document.getElementById("acv-" + safeKey)?.value || "";
   const altId    = altIdRaw ? (() => { try { return JSON.parse(altIdRaw); } catch (_) { return null; } })() : null;
   const cell     = document.getElementById("note-cell-" + safeKey);
 
@@ -659,14 +670,19 @@ async function saveNote(key) {
     if (!saveResp.ok) throw new Error(`Save failed: ${saveResp.status}`);
 
     notesMap = updated;
+    // Propagate world_first change into allRecords so re-render picks it up
+    const recIdx = allRecords.findIndex(r => `${r.cc}|${r.tc || ""}` === key);
+    if (recIdx !== -1) allRecords[recIdx].world_first = worldFirst;
     updateTokenBtn();
     buildConfusionSummary();
-    // Update just this cell + resolved row styling without full re-render
+    // Update just this cell + row styling without full re-render
     const newNote = updated[key];
     cell.innerHTML = renderNoteCell(key, newNote || null);
     const row = cell.closest("tr");
     if (row) {
-      row.className = newNote && newNote.resolved ? "resolved" : "";
+      const isWorldFirst = allRecords[recIdx]?.world_first;
+      const isResolved   = newNote && newNote.resolved;
+      row.className = [isWorldFirst ? 'world-first' : '', isResolved ? 'resolved' : ''].filter(Boolean).join(' ');
     }
 
   } catch (err) {
@@ -831,6 +847,7 @@ async function init() {
         photo_credit:     r.photo_credit     || det.photo_credit     || null,
         subnational_code: r.subnational_code || det.subnational_code || null,
         exotic_category:  r.exotic_category  || det.exotic_category  || null,
+        world_first:      r.world_first      || det.world_first      || false,
       };
     });
 
@@ -851,6 +868,7 @@ async function init() {
         photo_credit:     r.photo_credit     || null,
         subnational_code: r.subnational_code || null,
         exotic_category:  r.exotic_category  || null,
+        world_first:      r.world_first      || false,
       }));
     allRecords = allRecords.concat(toAdd);
   }
@@ -995,6 +1013,8 @@ function render() {
     const isNew = newCodes.has(`${r.cc}|${r.tc || ""}`) ||
                   newRecords.some(n => n.country_code === r.cc && n.common_name === r.sn);
     const newBadge = isNew ? '<span class="flag-new">NEW</span>' : "";
+    const worldFirst = r.world_first;
+    const worldBadge = worldFirst ? '<span class="flag-world">WORLD 1ST</span>' : "";
     const exoticHtml = r.exotic_category && EXOTIC_ICON[r.exotic_category]
       ? `<img src="${EXOTIC_ICON[r.exotic_category]}" class="exotic-icon" alt="${r.exotic_category}" title="${EXOTIC_LABEL[r.exotic_category]}">`
       : "";
@@ -1010,7 +1030,7 @@ function render() {
     const noteHtml = `<div id="note-cell-${safeKey}">${renderNoteCell(noteKey, note)}</div>`;
 
     return `
-      <tr class="${resolved ? 'resolved' : ''}">
+      <tr class="${[worldFirst ? 'world-first' : '', resolved ? 'resolved' : ''].filter(Boolean).join(' ')}">
         <td data-label="Country">${escHtml(r.cn)}</td>
         <td data-label="Species">
           <div class="species-cell">
@@ -1024,7 +1044,7 @@ function render() {
               return `<div class="photo-wrap"><a href="${mlLink}" target="_blank"><img class="photo-thumb" src="${r.photo_url}" alt="${escHtml(r.sn)}" loading="lazy"></a>${creditHtml}</div>`;
             })() : ''}
             <div>
-              <span class="species-name">${escHtml(r.sn)}${newBadge}${exoticHtml}</span>
+              <span class="species-name">${escHtml(r.sn)}${newBadge}${worldBadge}${exoticHtml}</span>
               <span class="sci-name sci-inline">${escHtml(r.sc)}</span>
             </div>
           </div>

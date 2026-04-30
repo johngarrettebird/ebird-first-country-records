@@ -212,6 +212,9 @@ def run_update():
     countries = fetch_countries()
     print(f"Checking {len(countries)} countries …\n")
 
+    # Set of every species already known in eBird — used to flag world firsts
+    all_known_species = set(sp for codes in snapshot.values() for sp in codes)
+
     new_this_run = []
 
     for i, country in enumerate(countries, 1):
@@ -228,6 +231,8 @@ def run_update():
             print(f"  → {len(newly_added)} new species detected", end="")
             for sp_code in sorted(newly_added):
                 tax = taxonomy.get(sp_code, {"sn": sp_code, "sc": "unknown"})
+                world_first     = sp_code not in all_known_species
+                all_known_species.add(sp_code)
                 obs_data        = fetch_obs_data(code, sp_code)
                 cl_id           = obs_data["cl"]
                 exotic_category = obs_data["exotic_category"]
@@ -250,6 +255,8 @@ def run_update():
                     "photo_url": photo_info["url"],
                     "photo_credit": photo_info["credit"],
                 }
+                if world_first:
+                    entry["world_first"] = True
                 detections.append(entry)
                 new_this_run.append(entry)
 
@@ -480,6 +487,31 @@ def backfill_checklists():
     print(f"\nDone. {updated}/{len(missing)} checklist IDs filled in.")
 
 
+def backfill_world_first():
+    """Flag detections whose species appears in only one country in the current snapshot."""
+    from collections import Counter
+    firsts_data   = load_json(NEW_FIRSTS)
+    snapshot_data = load_json(SNAPSHOT_PATH)
+    if not firsts_data or not snapshot_data:
+        sys.exit("Missing new_firsts.json or species_snapshot.json.")
+    detections = firsts_data["detections"]
+    snap       = snapshot_data.get("countries", {})
+    count      = Counter(sp for codes in snap.values() for sp in codes)
+    flagged = 0
+    for d in detections:
+        if count.get(d["species_code"], 0) == 1:
+            d["world_first"] = True
+            flagged += 1
+        else:
+            d.pop("world_first", None)   # remove stale flag if species now in >1 country
+    firsts_data["detections"] = detections
+    NEW_FIRSTS.write_text(json.dumps(firsts_data, ensure_ascii=False), encoding="utf-8")
+    print(f"Flagged {flagged} world first record(s):")
+    for d in detections:
+        if d.get("world_first"):
+            print(f"  ★  {d['country']:25s}  {d['common_name']}")
+
+
 def backfill_cl_from_photo():
     """For detections without a checklist ID, try to get one from the ML photo API."""
     firsts_data = load_json(NEW_FIRSTS)
@@ -569,6 +601,8 @@ if __name__ == "__main__":
         backfill_photos()
     elif "--backfill-photo-credit" in sys.argv:
         backfill_photo_credit()
+    elif "--backfill-world-first" in sys.argv:
+        backfill_world_first()
     elif "--backfill-cl-from-photo" in sys.argv:
         backfill_cl_from_photo()
     elif "--backfill-exotic" in sys.argv:
