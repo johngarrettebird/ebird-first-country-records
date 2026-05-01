@@ -487,5 +487,9 @@
   "MD|cetwar1": {
     "resolved": true,
     "notes": "AGREE -- no documentation, but accepted; clearly within expected range in far south of country"
+  },
+  "SE|eabwar1": {
+    "resolved": true,
+    "notes": "AGREE - old known rarity"
   }
 }
