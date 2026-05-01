@@ -491,5 +491,9 @@
   "SE|eabwar1": {
     "resolved": true,
     "notes": "AGREE - old known rarity"
+  },
+  "SE|piecro1": {
+    "resolved": true,
+    "notes": "AGREE -- correctly tagged escapee"
   }
 }
