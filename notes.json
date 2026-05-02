@@ -524,5 +524,9 @@
   },
   "MY|x01196": {
     "notes": "AGREE - well documented and cool hybrid"
+  },
+  "NA|zebfin2": {
+    "resolved": true,
+    "notes": "AGREE - not really documented, but seems reasonable to accept"
   }
 }
