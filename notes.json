@@ -433,67 +433,7 @@
     "notes": "AGREE - brief but good description and right within expected area"
   },
   "AO|sincis1": {
-    "notes": "audio added -- DISAGREE - Was allowed on filter but should not have been; not at all clear this is the correct ID from a single blurry photo"
-  },
-  "EC|fescoq3": {
     "resolved": true,
-    "notes": "DISAGREE -- presumably intended to be Lophornis verreauxii or something else?"
-  },
-  "NA|wooduc": {
-    "resolved": true,
-    "notes": "AGREE -- photographed presumed escapee record"
-  },
-  "BZ|batpig1": {
-    "resolved": true,
-    "notes": "AGREE -- photo appears diagnostic"
-  },
-  "MK|borowl": {
-    "resolved": true,
-    "notes": "AGREE - photos, edge of range in a country with few checklists"
-  },
-  "AO|bktgod": {
-    "resolved": true,
-    "notes": "AGREE - photo record (photo not in eBird)"
-  },
-  "BR|rebhaw2": {
-    "resolved": true,
-    "notes": "AGREE -- presumable accepted by CBRO? Published record."
-  },
-  "CN|indpit1": {
-    "resolved": true,
-    "notes": "AGREE - photo record"
-  },
-  "SE|x00379": {
-    "notes": "AGREE - photos; I adjusted to be an escapee (should check with reviewer)"
-  },
-  "TR|sacibi2": {
-    "resolved": true,
-    "notes": "AGREE - photos; defaults to escapee in matrix"
-  },
-  "JE|eurnig1": {
-    "notes": "AGREE - first record; MJI should follow up to maybe add as Sensitive species?"
-  },
-  "SS|yebapa1": {
-    "notes": "AGREE - expected record, allowed on filter, from underbirded area"
-  },
-  "CY|palwar5": {
-    "resolved": true,
-    "notes": "AGREE - photo record"
-  },
-  "BN|ashdro1": {
-    "resolved": true,
-    "notes": "DISAGREE - photo record, but checklist for \"Brunei\" with personal pin. MJI asked observer to fix."
-  },
-  "MD|cetwar1": {
-    "resolved": true,
-    "notes": "AGREE -- no documentation, but accepted; clearly within expected range in far south of country"
-  },
-  "SE|eabwar1": {
-    "resolved": true,
-    "notes": "AGREE - old known rarity"
-  },
-  "SE|piecro1": {
-    "resolved": true,
-    "notes": "AGREE -- correctly tagged escapee"
+    "notes": "DISAGREE - Was allowed on filter but should not have been; not at all clear this is the correct ID from a single blurry photo.\n\nTurned out to be Siffling Cisticola; now corrected."
   }
 }
