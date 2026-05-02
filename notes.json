@@ -511,5 +511,15 @@
   "GA|sooter1": {
     "resolved": true,
     "notes": "AGREE - treated as Record Not Exceptional; seems highly plausible; no doc"
+  },
+  "CA|afmdov1": {
+    "resolved": true,
+    "notes": "DISAGREE - in re-review; taxonomic error",
+    "alt_id": {
+      "code": "moudov",
+      "name": "Mourning Dove",
+      "sci": "Zenaida macroura",
+      "cat": "species"
+    }
   }
 }
