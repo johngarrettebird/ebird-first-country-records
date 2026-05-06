@@ -528,5 +528,8 @@
   "NA|zebfin2": {
     "resolved": true,
     "notes": "AGREE - not really documented, but seems reasonable to accept"
+  },
+  "JO|rinphe1": {
+    "notes": "Marked escapee; plumage looks odd"
   }
 }
