@@ -554,5 +554,9 @@
   },
   "CW|comeid": {
     "notes": "seems like the record has disappeared, so maybe a temporary (location) error? Needs to be checked again"
+  },
+  "MM|refboo": {
+    "resolved": true,
+    "notes": "photo confirmed; expected species eventually"
   }
 }
