@@ -562,5 +562,9 @@
   "MM|sopsku1": {
     "resolved": true,
     "notes": "photo confirmed"
+  },
+  "CN|blknod": {
+    "resolved": true,
+    "notes": "diagnostic photos"
   }
 }
