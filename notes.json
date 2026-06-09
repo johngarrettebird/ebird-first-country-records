@@ -566,5 +566,9 @@
   "CN|blknod": {
     "resolved": true,
     "notes": "diagnostic photos"
+  },
+  "CH|bongul": {
+    "resolved": true,
+    "notes": "photo records correct"
   }
 }
